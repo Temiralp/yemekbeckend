@@ -7,20 +7,16 @@ function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Oturum kontrolü
   useEffect(() => {
     const checkSession = async () => {
       const token = localStorage.getItem("token");
       if (token) {
         try {
-          // Backend'e token'ın geçerliliğini kontrol etmek için istek gönder
           await axios.get("http://localhost:3000/auth/profile", {
             headers: { Authorization: `Bearer ${token}` },
           });
-          // Token geçerliyse, kullanıcıyı dashboard'a yönlendir
-          navigate("/dashboard");
+          navigate("/profile");
         } catch (err) {
-          // Token geçersizse, localStorage'dan token'ı sil ve login sayfasında kal
           localStorage.removeItem("token");
           localStorage.removeItem("guest_user_id");
         }
@@ -66,9 +62,10 @@ function Login() {
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("guest_user_id", response.data.guest_user_id);
+      localStorage.setItem("user_type", response.data.user_type);
 
       alert("Misafir girişi başarılı!");
-      navigate("/dashboard");
+      navigate("/profile");
     } catch (err) {
       const errorMessage = err.response ? err.response.data.error : err.message;
       setError(`Misafir giriş hatası: ${errorMessage}`);

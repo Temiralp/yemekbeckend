@@ -107,7 +107,7 @@ const verifyCode = async (req, res) => {
                 }
 
                 const user = userResult[0];
-                createSessionAndRespond(user.id, null, "normal", req, res);
+                createSessionAndRespond(user.id, null, "registered", req, res);
               }
             );
           }
@@ -251,6 +251,7 @@ const createSessionAndRespond = (userId, guestId, userType, req, res) => {
         token,
         user_id: userId,
         guest_user_id: guestId,
+        user_type: userType,
       });
     }
   );

@@ -9,9 +9,8 @@ function Register() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate(); // Yönlendirme için navigate fonksiyonu
+  const navigate = useNavigate();
 
-  // Kayıt formu gönderimi
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");

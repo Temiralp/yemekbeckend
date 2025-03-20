@@ -1,4 +1,3 @@
-// src/components/VerifyCode.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -6,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 function VerifyCode() {
   const [verificationCode, setVerificationCode] = useState("");
   const [error, setError] = useState("");
-  const [timeLeft, setTimeLeft] = useState(180); // 3 dakika
+  const [timeLeft, setTimeLeft] = useState(180);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,12 +47,14 @@ function VerifyCode() {
       });
       console.log("Doğrulama yanıtı:", response.data);
 
-      // Token ve user_id'yi sakla
+      // Token ve user_id'yi 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_id", response.data.user_id);
+      localStorage.setItem("user_type", response.data.user_type);
+      
 
       alert("Giriş başarılı!");
-      navigate("/dashboard");
+      navigate("/profile");
     } catch (err) {
       const errorMessage = err.response ? err.response.data.error : err.message;
       setError(`Doğrulama hatası: ${errorMessage}`);

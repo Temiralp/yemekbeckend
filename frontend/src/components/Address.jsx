@@ -1,12 +1,11 @@
-
-// src/components/Address.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 function Address() {
   const [addresses, setAddresses] = useState([]);
   const [formData, setFormData] = useState({
-    title: "",
+    title: "Ev",
     city: "",
     district: "",
     neighborhood: "",
@@ -16,28 +15,39 @@ function Address() {
   });
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+
   const user_id = localStorage.getItem("user_id");
+  const user_type = localStorage.getItem("user_type");
+  const guest_id = localStorage.getItem("guest_user_id");
   const token = localStorage.getItem("token");
 
+  const addressTitleOptions = ["Ev", "İş", "Diğer"];
+
   useEffect(() => {
-    if (!user_id || !token) {
+    if (!token || !user_type || (user_type === "registered" && !user_id) || (user_type === "guest" && !guest_id)) {
       setError("Lütfen önce giriş yapın.");
+      navigate("/login");
       return;
     }
 
     const fetchAddresses = async () => {
       try {
-        const response = await axios.get(`http://localhost:3000/addresses?user_id=${user_id}`, {
+        const response = await axios.get("http://localhost:3000/addresses", {
+          params: { user_id, user_type, guest_id },
           headers: { Authorization: `Bearer ${token}` },
         });
         setAddresses(response.data.addresses);
       } catch (err) {
         setError("Adresler yüklenemedi: " + (err.response?.data?.error || err.message));
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          navigate("/login");
+        }
       }
     };
 
     fetchAddresses();
-  }, [user_id, token]);
+  }, [user_id, user_type, guest_id, token, navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -51,7 +61,12 @@ function Address() {
     e.preventDefault();
     setError("");
 
-    const data = { ...formData, user_id };
+    const data = {
+      ...formData,
+      user_id: user_type === "registered" ? user_id : null,
+      user_type,
+      guest_id: user_type === "guest" ? guest_id : null,
+    };
 
     try {
       if (editId) {
@@ -66,13 +81,15 @@ function Address() {
         alert("Adres eklendi!");
       }
 
-      const response = await axios.get(`http://localhost:3000/addresses?user_id=${user_id}`, {
+      const response = await axios.get("http://localhost:3000/addresses", {
+        params: { user_id, user_type, guest_id },
         headers: { Authorization: `Bearer ${token}` },
       });
       setAddresses(response.data.addresses);
 
+      // Formu sıfırla
       setFormData({
-        title: "",
+        title: "Ev",
         city: "",
         district: "",
         neighborhood: "",
@@ -83,6 +100,9 @@ function Address() {
       setEditId(null);
     } catch (err) {
       setError("İşlem başarısız: " + (err.response?.data?.error || err.message));
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        navigate("/login");
+      }
     }
   };
 
@@ -93,7 +113,7 @@ function Address() {
       district: address.district,
       neighborhood: address.neighborhood,
       street: address.street,
-      address_detail: address.address_detail,
+      address_detail: address.address_detail || "",
       is_default: address.is_default,
     });
     setEditId(address.id);
@@ -103,13 +123,17 @@ function Address() {
     if (!window.confirm("Bu adresi silmek istediğinize emin misiniz?")) return;
 
     try {
-      await axios.delete(`http://localhost:3000/addresses/${id}?user_id=${user_id}`, {
+      await axios.delete(`http://localhost:3000/addresses/${id}`, {
+        params: { user_id, user_type, guest_id },
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Adres silindi!");
       setAddresses(addresses.filter((address) => address.id !== id));
     } catch (err) {
       setError("Adres silinemedi: " + (err.response?.data?.error || err.message));
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        navigate("/login");
+      }
     }
   };
 
@@ -117,18 +141,22 @@ function Address() {
     <div style={{ maxWidth: "600px", margin: "0 auto", padding: "20px" }}>
       <h1>Adres Yönetimi</h1>
 
-      {/* Adres Ekleme/Güncelleme Formu */}
       <form onSubmit={handleSubmit} style={{ marginBottom: "20px" }}>
         <div style={{ marginBottom: "10px" }}>
-          <input
-            type="text"
+          <label style={{ display: "block", marginBottom: "5px" }}>Adres Başlığı:</label>
+          <select
             name="title"
-            placeholder="Adres Başlığı (ör. Ev Adresi)"
             value={formData.title}
             onChange={handleChange}
             required
             style={{ width: "100%", padding: "8px" }}
-          />
+          >
+            {addressTitleOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div style={{ marginBottom: "10px" }}>
           <input
@@ -194,7 +222,10 @@ function Address() {
             Varsayılan Adres Yap
           </label>
         </div>
-        <button type="submit" style={{ width: "100%", padding: "10px", background: "#007bff", color: "#fff", border: "none" }}>
+        <button
+          type="submit"
+          style={{ width: "100%", padding: "10px", background: "#007bff", color: "#fff", border: "none" }}
+        >
           {editId ? "Adresi Güncelle" : "Adres Ekle"}
         </button>
       </form>
@@ -207,26 +238,42 @@ function Address() {
       ) : (
         <ul style={{ listStyle: "none", padding: 0 }}>
           {addresses.map((address) => (
-            <li key={address.id} style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "10px", borderRadius: "5px" }}>
-              <h3>{address.title}</h3>
+            <li
+              key={address.id}
+              style={{
+                border: "1px solid #ccc",
+                padding: "10px",
+                marginBottom: "10px",
+                borderRadius: "5px",
+                backgroundColor: address.is_default ? "#e0f7fa" : "#fff",
+              }}
+            >
+              <h3>{address.title} {address.is_default && "(Varsayılan)"}</h3>
               <p><strong>Şehir:</strong> {address.city}</p>
               <p><strong>İlçe:</strong> {address.district}</p>
               <p><strong>Mahalle:</strong> {address.neighborhood}</p>
               <p><strong>Sokak:</strong> {address.street}</p>
               <p><strong>Detay:</strong> {address.address_detail || "Belirtilmemiş"}</p>
-              <p><strong>Varsayılan:</strong> {address.is_default ? "Evet" : "Hayır"}</p>
-              <button
-                onClick={() => handleEdit(address)}
-                style={{ padding: "5px 10px", background: "#ffc107", color: "#fff", border: "none", marginRight: "10px" }}
-              >
-                Düzenle
-              </button>
-              <button
-                onClick={() => handleDelete(address.id)}
-                style={{ padding: "5px 10px", background: "#dc3545", color: "#fff", border: "none" }}
-              >
-                Sil
-              </button>
+              <div style={{ marginTop: "10px" }}>
+                <button
+                  onClick={() => handleEdit(address)}
+                  style={{
+                    padding: "5px 10px",
+                    background: "#ffc107",
+                    color: "#fff",
+                    border: "none",
+                    marginRight: "10px",
+                  }}
+                >
+                  Düzenle
+                </button>
+                <button
+                  onClick={() => handleDelete(address.id)}
+                  style={{ padding: "5px 10px", background: "#dc3545", color: "#fff", border: "none" }}
+                >
+                  Sil
+                </button>
+              </div>
             </li>
           ))}
         </ul>
