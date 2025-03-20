@@ -3,7 +3,6 @@ const router = express.Router();
 const productController = require("../controllers/productController");
 const authenticateToken = require("../middleware/authMiddleware");
 
-// Ürün Rotaları
 router.get("/products", productController.getAllProducts); // Tüm ürünleri listele
 router.get("/products/:id", productController.getProductById); // Ürün detayını al
 router.post("/createProducts", productController.createProduct); // Yeni ürün ekle

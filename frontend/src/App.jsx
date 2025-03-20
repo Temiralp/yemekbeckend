@@ -5,6 +5,7 @@ import Register from "./components/Register";
 import Login from "./components/Login";
 import Address from "./components/Address";
 import VerifyCode from "./components/VerifyCode";
+import Profile from "./components/Profile";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/address" element={<Address />} />
         <Route path="/verify-code" element={<VerifyCode />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );

@@ -1,6 +1,5 @@
 const db = require("../config/db");
 
-// Adres Ekleme
 exports.addAddress = async (req, res) => {
   const { user_id, user_type, title, city, district, neighborhood, street, address_detail, is_default, guest_id } = req.body;
 
@@ -18,7 +17,6 @@ exports.addAddress = async (req, res) => {
       });
     }
 
-    // Yeni adresi ekle
     db.query(
       "INSERT INTO addresses (user_id, user_type, title, city, district, neighborhood, street, address_detail, is_default, guest_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [user_id, user_type || "registered", title, city, district, neighborhood, street, address_detail, is_default || 0, guest_id || null],
@@ -37,7 +35,6 @@ exports.addAddress = async (req, res) => {
   }
 };
 
-// Adres Listeleme
 exports.getAddresses = async (req, res) => {
   const { user_id } = req.query;
 
@@ -60,7 +57,6 @@ exports.getAddresses = async (req, res) => {
   }
 };
 
-// Adres Güncelleme
 exports.updateAddress = async (req, res) => {
   const { id } = req.params;
   const { user_id, user_type, title, city, district, neighborhood, street, address_detail, is_default, guest_id } = req.body;
@@ -79,7 +75,6 @@ exports.updateAddress = async (req, res) => {
       });
     }
 
-    // Adresi güncelle
     db.query(
       "UPDATE addresses SET user_type = ?, title = ?, city = ?, district = ?, neighborhood = ?, street = ?, address_detail = ?, is_default = ?, guest_id = ? WHERE id = ? AND user_id = ?",
       [user_type || "registered", title, city, district, neighborhood, street, address_detail, is_default || 0, guest_id || null, id, user_id],
@@ -102,7 +97,6 @@ exports.updateAddress = async (req, res) => {
   }
 };
 
-// Adres Silme
 exports.deleteAddress = async (req, res) => {
   const { id } = req.params;
   const { user_id } = req.query;

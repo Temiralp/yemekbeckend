@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -6,6 +6,29 @@ function Login() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  // Oturum kontrolü
+  useEffect(() => {
+    const checkSession = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          // Backend'e token'ın geçerliliğini kontrol etmek için istek gönder
+          await axios.get("http://localhost:3000/auth/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          // Token geçerliyse, kullanıcıyı dashboard'a yönlendir
+          navigate("/dashboard");
+        } catch (err) {
+          // Token geçersizse, localStorage'dan token'ı sil ve login sayfasında kal
+          localStorage.removeItem("token");
+          localStorage.removeItem("guest_user_id");
+        }
+      }
+    };
+
+    checkSession();
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,7 +57,7 @@ function Login() {
     const deviceData = {
       device_id: "test-device-123",
       device_type: "Android",
-      device_model: "Samsung Galaxy S21", 
+      device_model: "Samsung Galaxy S21",
     };
 
     try {

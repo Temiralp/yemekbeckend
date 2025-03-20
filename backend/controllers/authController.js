@@ -4,7 +4,7 @@ const db = require("../config/db");
 const config = require("../config/config");
 const moment = require("moment");
 
-exports.register = async (req, res) => {
+const register = async (req, res) => {
   const { name, surname, phone, email } = req.body;
   const fullName = `${name} ${surname}`;
 
@@ -15,7 +15,7 @@ exports.register = async (req, res) => {
       (err, result) => {
         if (err) {
           console.error("Kullanıcı ekleme hatası:", err);
-          return res.status(500).json({ error: "Kullanıcı kaydedilemedi.." });
+          return res.status(500).json({ error: "Kullanıcı kaydedilemedi." });
         }
 
         res.json({ message: "Kayıt başarılı!" });
@@ -27,7 +27,7 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.login = async (req, res) => {
+const login = async (req, res) => {
   const { phone } = req.body;
 
   if (!phone) {
@@ -42,7 +42,9 @@ exports.login = async (req, res) => {
       }
 
       if (result.length === 0) {
-        return res.status(404).json({ error: "Bu telefon numarasına sahip bir kullanıcı bulunamadı." });
+        return res.status(404).json({
+          error: "Bu telefon numarasına sahip bir kullanıcı bulunamadı.",
+        });
       }
 
       const verificationCode = "123456";
@@ -70,7 +72,7 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.verifyCode = async (req, res) => {
+const verifyCode = async (req, res) => {
   const { phone, code } = req.body;
 
   try {
@@ -96,31 +98,18 @@ exports.verifyCode = async (req, res) => {
               return res.status(500).json({ error: "Doğrulama kodu kullanılırken hata oluştu." });
             }
 
-            db.query("SELECT * FROM users WHERE phone = ?", [phone], (err, userResult) => {
-              if (err || userResult.length === 0) {
-                return res.status(500).json({ error: "Kullanıcı bulunamadı." });
-              }
-
-              const user = userResult[0];
-              const token = jwt.sign({ id: user.id, phone: user.phone }, config.JWT_SECRET, { expiresIn: "1h" });
-
-              const createdAt = moment().toDate();
-              const expiresAt = moment().add(1, "hours").toDate();
-              const deviceInfo = req.headers["user-agent"] || "Bilinmeyen Cihaz";
-
-              db.query(
-                "INSERT INTO sessions (user_id, token, created_at, expires_at, device_info) VALUES (?, ?, ?, ?, ?)",
-                [user.id, token, createdAt, expiresAt, deviceInfo],
-                (err, result) => {
-                  if (err) {
-                    console.error("Oturum kaydetme hatası:", err);
-                    return res.status(500).json({ error: "Oturum kaydedilemedi." });
-                  }
-
-                  res.json({ message: "Giriş başarılı!", token, user_id: user.id });
+            db.query(
+              "SELECT * FROM users WHERE phone = ?",
+              [phone],
+              (err, userResult) => {
+                if (err || userResult.length === 0) {
+                  return res.status(500).json({ error: "Kullanıcı bulunamadı." });
                 }
-              );
-            });
+
+                const user = userResult[0];
+                createSessionAndRespond(user.id, null, "normal", req, res);
+              }
+            );
           }
         );
       }
@@ -131,17 +120,14 @@ exports.verifyCode = async (req, res) => {
   }
 };
 
-// Yeni fonksiyon: Üye olmadan giriş (Guest Login)
-exports.guestLogin = async (req, res) => {
+const guestLogin = async (req, res) => {
   const { device_id, device_type, device_model } = req.body;
 
-  // Gerekli alanların kontrolü
   if (!device_id) {
     return res.status(400).json({ error: "Cihaz ID'si (device_id) zorunludur." });
   }
 
   try {
-    // Cihazın daha önce kaydedilip kaydedilmediğini kontrol et
     db.query(
       "SELECT * FROM guest_users WHERE device_id = ?",
       [device_id],
@@ -155,7 +141,6 @@ exports.guestLogin = async (req, res) => {
         let guestUserId;
 
         if (result.length > 0) {
-          // Cihaz zaten kayıtlı, last_active tarihini güncelle
           guestUserId = result[0].id;
           db.query(
             "UPDATE guest_users SET last_active = ? WHERE device_id = ?",
@@ -166,15 +151,19 @@ exports.guestLogin = async (req, res) => {
                 return res.status(500).json({ error: "Cihaz güncellenemedi." });
               }
 
-              // Token oluştur ve sessions tablosuna kaydet
-              createSessionAndRespond(guestUserId, req, res);
+              createSessionAndRespond(null, guestUserId, "guest", req, res);
             }
           );
         } else {
-          // Yeni cihaz, guest_users tablosuna ekle
           db.query(
             "INSERT INTO guest_users (device_id, device_type, device_model, first_seen, last_active) VALUES (?, ?, ?, ?, ?)",
-            [device_id, device_type || "Bilinmeyen", device_model || "Bilinmeyen", currentTime, currentTime],
+            [
+              device_id,
+              device_type || "Bilinmeyen",
+              device_model || "Bilinmeyen",
+              currentTime,
+              currentTime,
+            ],
             (err, insertResult) => {
               if (err) {
                 console.error("Cihaz ekleme hatası:", err);
@@ -183,8 +172,7 @@ exports.guestLogin = async (req, res) => {
 
               guestUserId = insertResult.insertId;
 
-              // Token oluştur ve sessions tablosuna kaydet
-              createSessionAndRespond(guestUserId, req, res);
+              createSessionAndRespond(null, guestUserId, "guest", req, res);
             }
           );
         }
@@ -196,24 +184,82 @@ exports.guestLogin = async (req, res) => {
   }
 };
 
-// Yardımcı fonksiyon: Token oluştur ve sessions tablosuna kaydet
-const createSessionAndRespond = (guestUserId, req, res) => {
-  const token = jwt.sign({ id: guestUserId, type: "guest" }, config.JWT_SECRET, { expiresIn: "1h" });
+const logout = (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(400).json({ error: "Token gereklidir." });
+  }
+
+  jwt.verify(token, config.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Geçersiz token." });
+    }
+
+    const userId = user.type === "guest" ? null : user.id;
+    const guestId = user.type === "guest" ? user.id : null;
+
+    const query = `
+      DELETE FROM sessions 
+      WHERE token = ? AND (
+        (user_id = ? AND guest_id IS NULL) OR 
+        (guest_id = ? AND user_id IS NULL)
+      )
+    `;
+
+    db.query(query, [token, userId, guestId], (err, result) => {
+      if (err) {
+        console.error("Oturum silme hatası:", err);
+        return res.status(500).json({ error: "Oturum kapatılamadı." });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Oturum bulunamadı." });
+      }
+
+      res.status(200).json({
+        status: "success",
+        message: "Oturum başarıyla kapatıldı.",
+      });
+    });
+  });
+};
+
+const createSessionAndRespond = (userId, guestId, userType, req, res) => {
+  const token = jwt.sign(
+    { id: userId || guestId, type: userType },
+    config.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
 
   const createdAt = moment().toDate();
   const expiresAt = moment().add(1, "hours").toDate();
   const deviceInfo = req.headers["user-agent"] || "Bilinmeyen Cihaz";
 
   db.query(
-    "INSERT INTO sessions (user_id, token, created_at, expires_at, device_info) VALUES (?, ?, ?, ?, ?)",
-    [guestUserId, token, createdAt, expiresAt, deviceInfo],
+    "INSERT INTO sessions (user_id, guest_id, token, created_at, expires_at, device_info) VALUES (?, ?, ?, ?, ?, ?)",
+    [userId, guestId, token, createdAt, expiresAt, deviceInfo],
     (err, result) => {
       if (err) {
         console.error("Oturum kaydetme hatası:", err);
         return res.status(500).json({ error: "Oturum kaydedilemedi." });
       }
 
-      res.json({ message: "Misafir girişi başarılı!", token, guest_user_id: guestUserId });
+      res.json({
+        message: userType === "guest" ? "Misafir girişi başarılı!" : "Giriş başarılı!",
+        token,
+        user_id: userId,
+        guest_user_id: guestId,
+      });
     }
   );
+};
+
+module.exports = {
+  register,
+  login,
+  verifyCode,
+  guestLogin,
+  logout,
 };

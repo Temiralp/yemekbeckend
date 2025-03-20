@@ -1,7 +1,6 @@
 const db = require("../config/db");
 const moment = require("moment");
 
-// Tüm ürünleri listele
 const getAllProducts = (req, res) => {
   const query = `
     SELECT 
@@ -27,7 +26,6 @@ const getAllProducts = (req, res) => {
       return res.status(500).json({ error: "Veritabanı hatası" });
     }
 
-    // JSON string'lerini parse et
     const parsedResults = results.map((product) => ({
       ...product,
       options: product.options ? JSON.parse(product.options) : [],
@@ -41,7 +39,6 @@ const getAllProducts = (req, res) => {
   });
 };
 
-// Tek bir ürünü getir
 const getProductById = (req, res) => {
   const productId = req.params.id;
   const query = `
@@ -85,7 +82,6 @@ const getProductById = (req, res) => {
   });
 };
 
-// Yeni ürün ekle
 const createProduct = (req, res) => {
   const {
     name,
@@ -172,7 +168,6 @@ const updateProduct = (req, res) => {
     is_active,
   } = req.body;
 
-  // Ürünün varlığını kontrol et
   db.query(
     "SELECT * FROM products WHERE id = ?",
     [productId],
@@ -290,7 +285,6 @@ const addToCart = (req, res) => {
     return res.status(400).json({ error: "Ürün ID'si ve miktar zorunludur." });
   }
 
-  // Ürünün varlığını kontrol et
   db.query(
     "SELECT * FROM products WHERE id = ? AND is_active = TRUE",
     [product_id],
@@ -309,7 +303,6 @@ const addToCart = (req, res) => {
         ? JSON.parse(product.ingredients)
         : [];
 
-      // Malzemeleri doğrula: Sadece mevcut malzemeler çıkarılabilir
       const removedIngredients = ingredients || [];
       for (const ing of removedIngredients) {
         if (!productIngredients.some((pi) => pi.name === ing.name)) {
@@ -328,7 +321,6 @@ const addToCart = (req, res) => {
       const guestId = user.isGuest ? user.id : null;
       const userType = user.isGuest ? "guest" : "normal";
 
-      // Sepete ekle
       db.query(
         "INSERT INTO cart (user_id, user_type, product_id, quantity, options, ingredients, note, added_at, guest_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [

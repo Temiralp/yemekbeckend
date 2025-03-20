@@ -12,6 +12,8 @@ router.post("/guest-login", authController.guestLogin);
 
 router.post("/verify-code", authController.verifyCode);
 
+router.post("/logout", authMiddleware, authController.logout);
+
 router.get("/profile", authMiddleware, (req, res) => {
     res.json({ message: "Kullanıcı profili", user: req.user });
 });
