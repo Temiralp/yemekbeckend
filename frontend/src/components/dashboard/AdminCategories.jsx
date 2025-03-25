@@ -205,7 +205,7 @@ const AdminUsers = () => {
               className="search-bar"
             />
             <div className="add-boss">
-                    <button>Kullanıcı Ekle</button>
+                    <button>Kategori Ekle</button>
             </div>
           </div>
 

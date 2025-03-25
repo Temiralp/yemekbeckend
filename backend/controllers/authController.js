@@ -33,7 +33,7 @@ const login = async (req, res) => {
   if (!phone) {
     return res.status(400).json({ error: "Telefon numarası zorunludur." });
   }
-
+ 
   try {
     db.query("SELECT * FROM users WHERE phone = ?", [phone], (err, result) => {
       if (err) {

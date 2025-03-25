@@ -509,13 +509,13 @@
 }
 
 .edit-panel.open {
-  transform: translateX(0); 
+  transform: translateX(0);
   opacity: 1;
 }
 
 .edit-panel.closed {
   transform: translateX(100%);
-  opacity: 0; 
+  opacity: 0;
 }
 
 /* Edit Panel Header */
@@ -642,4 +642,462 @@
     flex: 1 1 45%; /* Küçük ekranlarda iki buton yan yana */
     justify-content: center;
   }
+}
+
+.filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-boss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-boss button {
+  padding: 10px 18px;
+  outline: none;
+  border-radius: 0;
+  background: #3498db;
+  border: 0;
+  color: #e6e6e6;
+  border-radius: 4px;
+  box-shadow: 2px 4px 8px 2px #00000046;
+  cursor: pointer;
+  transition: all 68.5ms linear;
+}
+
+.add-boss button:hover {
+  color: #fff;
+  background: #013870;
+}
+
+.sidebar {
+  height: 100vh; /* Full viewport height */
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #2c3e50; /* Adjust to your theme */
+  transition: width 0.3s ease;
+  overflow-y: auto; /* Enable scrolling for overflow */
+  width: 70px; /* Default collapsed width */
+}
+
+.sidebar.open {
+  width: 250px; /* Expanded width */
+}
+
+.sidebar.closed {
+  width: 100px; /* Collapsed width */
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  position: sticky; /* Keep header at top */
+  top: 0;
+  background-color: inherit;
+  z-index: 1;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+  flex-grow: 1; /* Allow nav to take available space */
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-nav li {
+  margin: 5px 0;
+}
+
+/* Menu items */
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #fff;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.sidebar-nav a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-nav .active {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-left: 4px solid #fff;
+}
+
+/* Menu text */
+.menu-text {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar.closed .menu-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* Icons */
+.menu-icon {
+  margin-right: 15px;
+  min-width: 20px; /* Ensure icons are visible when collapsed */
+}
+
+/* Dropdown */
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  cursor: pointer;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-arrow {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu-container {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.dropdown-menu-container.open {
+  max-height: 200px;
+}
+
+.dropdown-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.dropdown-menu a {
+  padding: 10px 20px 10px 40px;
+}
+
+.sidebar.closed .dropdown-menu-container {
+  display: none; /* Hide dropdown when sidebar is closed */
+}
+
+/* Logout */
+.logout-link {
+  transition: all 0.3s ease;
+}
+
+.logout-link:hover {
+  background-color: #e74c3c !important;
+}
+
+/* Ensure visibility when closed */
+.sidebar.closed .dropdown-toggle .menu-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar.closed .menu-icon {
+  margin-right: 0;
+}
+
+/* Scrollbar styling (optional) */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* CouponForm.css */
+
+.coupon-form-section {
+  max-width: 1000px;
+  margin: 20px auto;
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+}
+
+.coupon-form {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* Satır Grupları */
+.form-group-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* Üçlü gruplar için */
+.form-group-row-triple {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Tekli tam genişlik için */
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 14px;
+  position: relative;
+}
+
+/* Zorunlu alanlar için yıldız */
+.form-group label::after {
+  content: "*";
+  color: #e74c3c;
+  margin-left: 3px;
+  font-size: 14px;
+}
+
+/* Zorunlu olmayan alanlar için yıldızı kaldırma */
+.form-group label[for="description"]::after,
+.form-group label[for="usage_limit"]::after {
+  content: none;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea,
+.custom-datepicker {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background-color: #f9f9f9;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.custom-datepicker:focus {
+  outline: none;
+  border-color: #00c4b4;
+  background-color: #fff;
+  box-shadow: 0 0 8px rgba(0, 196, 180, 0.2);
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Placeholder stili */
+.form-group input::placeholder,
+.form-group select::placeholder,
+.form-group textarea::placeholder,
+.custom-datepicker::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+/* Hata ve Başarı Mesajları */
+.error,
+.success {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: left;
+  border: 1px solid transparent;
+}
+
+.error {
+  color: #d9534f;
+  background-color: #fceae9;
+  border-color: #f5c6cb;
+}
+
+.success {
+  color: #27ae60;
+  background-color: #e9f7ef;
+  border-color: #c3e6cb;
+}
+
+/* Buton Stili */
+.submit-btn {
+  background-color: #00c4b4;
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  align-self: flex-end;
+  box-shadow: 0 2px 10px rgba(0, 196, 180, 0.3);
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #00b3a4;
+  box-shadow: 0 4px 15px rgba(0, 196, 180, 0.4);
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* DatePicker Özelleştirme */
+.react-datepicker {
+  font-family: Arial, sans-serif;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.react-datepicker__header {
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px;
+  border-radius: 8px 8px 0 0;
+}
+
+.react-datepicker__current-month {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+  width: 2rem;
+  line-height: 2rem;
+  margin: 0.2rem;
+  font-size: 12px;
+}
+
+.react-datepicker__day-name {
+  color: #666;
+  font-weight: 500;
+}
+
+.react-datepicker__day {
+  color: #333;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.react-datepicker__day:hover {
+  background-color: #e0e0e0;
+  border-radius: 50%;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #00c4b4 !important;
+  color: white !important;
+  border-radius: 50%;
+}
+
+.react-datepicker__day--outside-month {
+  color: #ccc;
+}
+
+.react-datepicker__navigation {
+  top: 12px;
+}
+
+.react-datepicker__navigation--previous {
+  left: 10px;
+}
+
+.react-datepicker__navigation--next {
+  right: 10px;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #666;
+  border-width: 2px 2px 0 0;
+}
+
+/* Responsive Tasarım */
+@media (max-width: 768px) {
+  .coupon-form-section {
+    padding: 20px;
+    margin: 10px;
+  }
+
+  .form-group-row,
+  .form-group-row-triple {
+    grid-template-columns: 1fr;
+  }
+}
+
+.code-group {
+  position: relative;
+}
+
+.code-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.generate-btn {
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.generate-btn:hover {
+  background-color: #45a049;
+}
+
+.generate-btn:active {
+  background-color: #3d8b40;
+}
+
+.form-group input[type="text"] {
+  text-transform: uppercase;
 }

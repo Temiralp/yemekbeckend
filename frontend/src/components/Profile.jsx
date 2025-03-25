@@ -24,10 +24,6 @@ function Profile() {
         setError(
           "Profil yüklenemedi: " + (err.response?.data?.error || err.message)
         );
-        if (err.response?.status === 401 || err.response?.status === 403) {
-          localStorage.removeItem("token");
-          navigate("/login");
-        }
       }
     };
 

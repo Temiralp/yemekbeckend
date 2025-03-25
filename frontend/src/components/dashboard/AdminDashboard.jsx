@@ -1,13 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import {
-  FaTachometerAlt,
-  FaShoppingCart,
-  FaUsers,
-  FaCog,
-  FaMoneyBillWave,
-} from "react-icons/fa";
 import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -20,7 +13,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { CiLogout } from "react-icons/ci";
+import { FaShoppingCart, FaUsers, FaMoneyBillWave } from "react-icons/fa";
+import Sidebar from "./Sidebar";
 
 ChartJS.register(
   CategoryScale,
@@ -183,71 +177,13 @@ const AdminDashboard = () => {
           </svg>
         </button>
         <h1 className="header-title">Yönetim Paneli</h1>
-        {/* BURAYA KULLANICI PROFİLİ KOY */}
       </header>
 
-      <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
-        <div className="sidebar-header">
-          <h2 className="sidebar-title">_</h2>
-          <button className="close-sidebar" onClick={toggleSidebar}>
-            ✕
-          </button>
-        </div>
-        <nav className="sidebar-nav">
-          <ul>
-            <li style={{ marginTop: "60px" }}>
-              <NavLink
-                to="/admin/dashboard"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaTachometerAlt className="menu-icon" />
-                <span className="menu-text">Dashboard</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/admin/orders"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaShoppingCart className="menu-icon" />
-                <span className="menu-text">Siparişler</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/admin/users"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaUsers className="menu-icon" />
-                <span className="menu-text">Kullanıcılar</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/admin/settings"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaCog className="menu-icon" />
-                <span className="menu-text">Ayarlar</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                onClick={handleLogoutClick}
-                style={{ background: "#c0392b" }}
-                className="logout-link"
-              >
-                <CiLogout style={{ fontSize: "20px", fontWeight: "bold" }} />
-                <span className="menu-text">Çıkış Yap</span>
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
-      </aside>
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+//         handleLogoutClick={handleLogoutClick}
+      />
 
       <main
         className={`main-content ${

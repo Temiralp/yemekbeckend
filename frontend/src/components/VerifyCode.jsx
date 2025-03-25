@@ -41,17 +41,18 @@ function VerifyCode() {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:3000/auth/verify-code", {
-        phone,
-        code: verificationCode,
-      });
+      const response = await axios.post(
+        "http://localhost:3000/auth/verify-code",
+        {
+          phone,
+          code: verificationCode,
+        }
+      );
       console.log("Doğrulama yanıtı:", response.data);
 
-      // Token ve user_id'yi 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user_id", response.data.user_id);
       localStorage.setItem("user_type", response.data.user_type);
-      
 
       alert("Giriş başarılı!");
       navigate("/profile");
@@ -63,12 +64,23 @@ function VerifyCode() {
   };
 
   return (
-    <div className="form-container" style={{ maxWidth: "400px", margin: "0 auto", padding: "20px" }}>
+    <div
+      className="form-container"
+      style={{ maxWidth: "400px", margin: "0 auto", padding: "20px" }}
+    >
       <h1>Doğrulama Kodu</h1>
       <p>Telefon numaranıza ({phone}) 6 haneli bir doğrulama kodu gönderdik.</p>
       <p style={{ color: "gray" }}>(Şimdilik doğrulama kodu: 123456)</p>
       <p>
-        Kalan süre: <span style={{ color: timeLeft <= 30 ? "red" : "black", fontWeight: "bold" }}>{formatTime(timeLeft)}</span>
+        Kalan süre:{" "}
+        <span
+          style={{
+            color: timeLeft <= 30 ? "red" : "black",
+            fontWeight: "bold",
+          }}
+        >
+          {formatTime(timeLeft)}
+        </span>
       </p>
 
       <form onSubmit={handleVerification}>
@@ -80,10 +92,25 @@ function VerifyCode() {
             onChange={(e) => setVerificationCode(e.target.value)}
             required
             maxLength="6"
-            style={{ width: "100%", padding: "8px", textAlign: "center", letterSpacing: "5px", fontSize: "16px" }}
+            style={{
+              width: "100%",
+              padding: "8px",
+              textAlign: "center",
+              letterSpacing: "5px",
+              fontSize: "16px",
+            }}
           />
         </div>
-        <button type="submit" style={{ width: "100%", padding: "10px", background: "#28a745", color: "#fff", border: "none" }}>
+        <button
+          type="submit"
+          style={{
+            width: "100%",
+            padding: "10px",
+            background: "#28a745",
+            color: "#fff",
+            border: "none",
+          }}
+        >
           Doğrula
         </button>
       </form>

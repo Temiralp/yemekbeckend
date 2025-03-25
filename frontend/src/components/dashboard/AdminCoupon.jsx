@@ -1,25 +1,17 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate, NavLink, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
-import {
-  FaTachometerAlt,
-  FaShoppingCart,
-  FaUsers,
-  FaCog,
-  FaEdit,
-  FaTrash,
-} from "react-icons/fa";
-import { CiLogout } from "react-icons/ci";
+import { FaEdit, FaTrash } from "react-icons/fa";
 import Sidebar from "./Sidebar";
 import "./Orders.css";
 
-const AdminUsers = () => {
+const AdminCoupons = () => {
   const { admin, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [filteredCoupons, setFilteredCoupons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -27,7 +19,7 @@ const AdminUsers = () => {
   const [currentPage, setCurrentPage] = useState(() => {
     return parseInt(searchParams.get("page")) || 1;
   });
-  const usersPerPage = 10;
+  const couponsPerPage = 10;
 
   useEffect(() => {
     const handleResize = () => {
@@ -45,39 +37,49 @@ const AdminUsers = () => {
   }, [admin, navigate]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchCoupons = async () => {
       setLoading(true);
+      setError("");
       try {
-        const response = await api.get("/auth/users");
-        setUsers(response.data.users);
-        setFilteredUsers(response.data.users);
+        const response = await api.get("/api/coupon/");
+        console.log("API Response:", response.data);
+        // API'den gelen verinin doğru alanını alalım
+        const couponData = Array.isArray(response.data.data)
+          ? response.data.data
+          : response.data.coupons || [];
+        console.log("Processed Coupon Data:", couponData);
+        setCoupons(couponData);
+        setFilteredCoupons(couponData);
       } catch (err) {
-        setError(err.response?.data?.error || "Kullanıcılar getirilemedi.");
+        console.error("API Error:", err);
+        setError(err.response?.data?.error || "Kuponlar getirilemedi.");
+        setCoupons([]);
+        setFilteredCoupons([]);
       } finally {
         setLoading(false);
       }
     };
 
     if (admin) {
-      fetchUsers();
+      fetchCoupons();
     }
   }, [admin]);
 
   useEffect(() => {
-    let filtered = [...users];
+    let filtered = [...coupons];
     if (searchTerm) {
       filtered = filtered.filter(
-        (user) =>
-          user.id.toString().includes(searchTerm) ||
-          user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.phone.includes(searchTerm) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (coupon) =>
+          (coupon.code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (coupon.description &&
+            coupon.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    setFilteredUsers(filtered);
+    console.log("Filtered Coupons:", filtered);
+    setFilteredCoupons(filtered);
 
     const pageFromUrl = parseInt(searchParams.get("page")) || 1;
-    if (filtered.length > 0 && pageFromUrl > Math.ceil(filtered.length / usersPerPage)) {
+    if (filtered.length > 0 && pageFromUrl > Math.ceil(filtered.length / couponsPerPage)) {
       setCurrentPage(1);
       setSearchParams({ page: "1" });
     } else if (searchTerm) {
@@ -86,7 +88,7 @@ const AdminUsers = () => {
     } else {
       setCurrentPage(pageFromUrl);
     }
-  }, [searchTerm, users, searchParams, setSearchParams]);
+  }, [searchTerm, coupons, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (parseInt(searchParams.get("page")) !== currentPage) {
@@ -94,13 +96,13 @@ const AdminUsers = () => {
     }
   }, [currentPage, searchParams, setSearchParams]);
 
-  const handleDelete = async (userId) => {
-    if (window.confirm("Bu kullanıcıyı silmek istediğinizden emin misiniz?")) {
+  const handleDelete = async (couponId) => {
+    if (window.confirm("Bu kuponu silmek istediğinizden emin misiniz?")) {
       try {
-        await api.delete(`/auth/users/${userId}`);
-        setUsers(users.filter((user) => user.id !== userId));
+        await api.delete(`/api/coupon/${couponId}`);
+        setCoupons(coupons.filter((coupon) => coupon.id !== couponId));
       } catch (err) {
-        setError("Kullanıcı silinirken bir hata oluştu.");
+        setError("Kupon silinirken bir hata oluştu.");
       }
     }
   };
@@ -114,10 +116,16 @@ const AdminUsers = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const formatDate = (dateString) => {
+    if (!dateString) return "Bilinmiyor";
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? "Geçersiz Tarih" : date.toLocaleDateString("tr-TR");
+  };
+
+  const indexOfLastCoupon = currentPage * couponsPerPage;
+  const indexOfFirstCoupon = indexOfLastCoupon - couponsPerPage;
+  const currentCoupons = filteredCoupons.slice(indexOfFirstCoupon, indexOfLastCoupon);
+  const totalPages = Math.ceil(filteredCoupons.length / couponsPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -175,7 +183,7 @@ const AdminUsers = () => {
             />
           </svg>
         </button>
-        <h1 className="header-title">Kullanıcı Yönetimi</h1>
+        <h1 className="header-title">Kupon Yönetimi</h1>
       </header>
 
       <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
@@ -188,7 +196,6 @@ const AdminUsers = () => {
         <Sidebar
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
-          // handleLogoutClick={x}
         />
       </aside>
 
@@ -199,51 +206,60 @@ const AdminUsers = () => {
           <div className="filters">
             <input
               type="text"
-              placeholder="ID, Ad, Telefon veya Email ile ara..."
+              placeholder="Kupon Kodu veya Açıklama ile ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-bar"
             />
             <div className="add-boss">
-                    <button>Kullanıcı Ekle</button>
+              <button onClick={() => navigate("/admin/coupons/add")}>
+                Kupon Ekle
+              </button>
             </div>
           </div>
 
           {loading && <p className="loading">Yükleniyor...</p>}
           {error && <p className="error">{error}</p>}
-          {filteredUsers.length === 0 && !loading && !error && (
-            <p className="no-data">Kullanıcı bulunamadı.</p>
+          {filteredCoupons.length === 0 && !loading && !error && (
+            <p className="no-data">Kupon bulunamadı.</p>
           )}
-          {filteredUsers.length > 0 && (
+          {filteredCoupons.length > 0 && (
             <>
               <div className="table-wrapper">
                 <table className="orders-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Tam Ad</th>
-                      <th>Telefon</th>
-                      <th>Email</th>
+                      <th>Kupon Kodu</th>
+                      <
+th>İndirim Tipi</th>
+                      <th>İndirim Miktarı</th>
+                      <th>Min. Sipariş Tutarı</th>
+                      <th>Başlangıç Tarihi</th>
+                      <th>Bitiş Tarihi</th>
+                      <th>Kullanım Limiti</th>
                       <th>İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td>{user.full_name}</td>
-                        <td>{user.phone}</td>
-                        <td>{user.email}</td>
+                    {currentCoupons.map((coupon) => (
+                      <tr key={coupon.id}>
+                        <td>{coupon.code || "Bilinmiyor"}</td>
+                        <td>{coupon.discount_type === "percentage" ? "Yüzde (%)" : "Sabit Tutar"}</td>
+                        <td>{coupon.discount_amount || "0"}</td>
+                        <td>{coupon.min_order_amount || "0"}</td>
+                        <td>{formatDate(coupon.start_date)}</td>
+                        <td>{formatDate(coupon.end_date)}</td>
+                        <td>{coupon.usage_limit || "Sınırsız"}</td>
                         <td>
                           <button
                             className="action-btn edit-btn"
-                            onClick={() => navigate(`/admin/users/edit/${user.id}`)}
+                            onClick={() => navigate(`/admin/coupons/edit/${coupon.id}`)}
                           >
                             <FaEdit />
                           </button>
                           <button
                             className="action-btn delete-btn"
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDelete(coupon.id)}
                           >
                             <FaTrash />
                           </button>
@@ -290,4 +306,4 @@ const AdminUsers = () => {
   );
 };
 
-export default AdminUsers;
+export default AdminCoupons;

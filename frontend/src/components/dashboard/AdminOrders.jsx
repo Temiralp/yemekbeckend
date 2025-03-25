@@ -16,6 +16,7 @@ import {
   FaUndo,
 } from "react-icons/fa";
 import { CiLogout } from "react-icons/ci";
+import Sidebar from "./Sidebar";
 import "./Orders.css";
 
 const AdminOrders = () => {
@@ -234,60 +235,11 @@ const AdminOrders = () => {
             ✕
           </button>
         </div>
-        <nav className="sidebar-nav">
-          <ul>
-            <li>
-              <NavLink
-                to="/admin/dashboard"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaTachometerAlt className="menu-icon" />
-                <span className="menu-text">Dashboard</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/admin/orders"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaShoppingCart className="menu-icon" />
-                <span className="menu-text">Siparişler</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/admin/users"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaUsers className="menu-icon" />
-                <span className="menu-text">Kullanıcılar</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/admin/settings"
-                onClick={toggleSidebar}
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                <FaCog className="menu-icon" />
-                <span className="menu-text">Ayarlar</span>
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                onClick={handleLogout}
-                className="logout-link"
-                style={{ background: "#c0392b" }}
-              >
-                <CiLogout className="menu-icon" />
-                <span className="menu-text">Çıkış Yap</span>
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
+        <Sidebar
+          isSidebarOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          // handleLogoutClick={handleLogoutClick}
+        />
       </aside>
 
       <main

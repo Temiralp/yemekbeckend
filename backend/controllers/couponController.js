@@ -80,8 +80,8 @@ const createCoupon = (req, res) => {
     });
   }
 
-  if (!["percent", "fixed"].includes(discount_type)) {
-    return res.status(400).json({ error: "Geçersiz indirim tipi. 'percent' veya 'fixed' olmalı." });
+  if (!["percentage", "fixed"].includes(discount_type)) {
+    return res.status(400).json({ error: "Geçersiz indirim tipi. 'percentage' veya 'fixed' olmalı." });
   }
 
   db.query("SELECT * FROM coupons WHERE code = ?", [code], (err, results) => {

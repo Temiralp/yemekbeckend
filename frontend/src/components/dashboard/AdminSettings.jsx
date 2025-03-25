@@ -14,7 +14,7 @@ import { CiLogout } from "react-icons/ci";
 import Sidebar from "./Sidebar";
 import "./Orders.css";
 
-const AdminUsers = () => {
+const AdminSettings = () => {
   const { admin, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -175,7 +175,7 @@ const AdminUsers = () => {
             />
           </svg>
         </button>
-        <h1 className="header-title">Kullanıcı Yönetimi</h1>
+        <h1 className="header-title">Ayarlar</h1>
       </header>
 
       <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
@@ -204,9 +204,6 @@ const AdminUsers = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-bar"
             />
-            <div className="add-boss">
-                    <button>Kullanıcı Ekle</button>
-            </div>
           </div>
 
           {loading && <p className="loading">Yükleniyor...</p>}
@@ -290,4 +287,4 @@ const AdminUsers = () => {
   );
 };
 
-export default AdminUsers;
+export default AdminSettings;
