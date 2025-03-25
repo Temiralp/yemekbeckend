@@ -56,7 +56,9 @@ const login = async (req, res) => {
         (err, result) => {
           if (err) {
             console.error("Doğrulama kodu ekleme hatası:", err);
-            return res.status(500).json({ error: "Doğrulama kodu kaydedilemedi." });
+            return res
+              .status(500)
+              .json({ error: "Doğrulama kodu kaydedilemedi." });
           }
 
           console.log("SMS Gönderim Şablonu:");
@@ -82,11 +84,15 @@ const verifyCode = async (req, res) => {
       (err, result) => {
         if (err) {
           console.error("Doğrulama kodu kontrol hatası:", err);
-          return res.status(500).json({ error: "Doğrulama kodu kontrolü sırasında hata oluştu." });
+          return res
+            .status(500)
+            .json({ error: "Doğrulama kodu kontrolü sırasında hata oluştu." });
         }
 
         if (result.length === 0) {
-          return res.status(400).json({ error: "Geçersiz veya süresi dolmuş doğrulama kodu." });
+          return res
+            .status(400)
+            .json({ error: "Geçersiz veya süresi dolmuş doğrulama kodu." });
         }
 
         db.query(
@@ -95,7 +101,9 @@ const verifyCode = async (req, res) => {
           (err, result) => {
             if (err) {
               console.error("Kodu güncelleme hatası:", err);
-              return res.status(500).json({ error: "Doğrulama kodu kullanılırken hata oluştu." });
+              return res
+                .status(500)
+                .json({ error: "Doğrulama kodu kullanılırken hata oluştu." });
             }
 
             db.query(
@@ -103,7 +111,9 @@ const verifyCode = async (req, res) => {
               [phone],
               (err, userResult) => {
                 if (err || userResult.length === 0) {
-                  return res.status(500).json({ error: "Kullanıcı bulunamadı." });
+                  return res
+                    .status(500)
+                    .json({ error: "Kullanıcı bulunamadı." });
                 }
 
                 const user = userResult[0];
@@ -124,7 +134,9 @@ const guestLogin = async (req, res) => {
   const { device_id, device_type, device_model } = req.body;
 
   if (!device_id) {
-    return res.status(400).json({ error: "Cihaz ID'si (device_id) zorunludur." });
+    return res
+      .status(400)
+      .json({ error: "Cihaz ID'si (device_id) zorunludur." });
   }
 
   try {
@@ -247,7 +259,8 @@ const createSessionAndRespond = (userId, guestId, userType, req, res) => {
       }
 
       res.json({
-        message: userType === "guest" ? "Misafir girişi başarılı!" : "Giriş başarılı!",
+        message:
+          userType === "guest" ? "Misafir girişi başarılı!" : "Giriş başarılı!",
         token,
         user_id: userId,
         guest_user_id: guestId,
@@ -257,10 +270,37 @@ const createSessionAndRespond = (userId, guestId, userType, req, res) => {
   );
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    db.query("SELECT id, full_name, phone, email FROM users", (err, result) => {
+      if (err) {
+        console.error("Kullanıcıları listeleme hatası:", err);
+        return res.status(500).json({ error: "Kullanıcılar listelenemedi." });
+      }
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Hiç kullanıcı bulunamadı." });
+      }
+
+      res.json({
+        message: "Kullanıcılar başarıyla listelendi",
+        users: result,
+        total: result.length,
+      });
+    });
+  } catch (err) {
+    console.error("Kullanıcı listeleme genel hatası:", err);
+    res
+      .status(500)
+      .json({ error: "Kullanıcı listeleme işlemi sırasında hata oluştu." });
+  }
+};
+
 module.exports = {
   register,
   login,
   verifyCode,
   guestLogin,
   logout,
+  getAllUsers, 
 };

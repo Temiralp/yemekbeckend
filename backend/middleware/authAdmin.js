@@ -2,26 +2,16 @@ const jwt = require("jsonwebtoken");
 
 const authenticateAdmin = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  console.log("Gelen Authorization Header:", authHeader);
-
-  if (!authHeader) {
-    return res.status(400).json({ error: "Authorization header eksik." });
-  }
-
-  const token = authHeader.split(" ")[1];
-  console.log("Ayrıştırılan Token:", token); 
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(400).json({ error: "Token bulunamadı veya yanlış formatta." });
+    return res.status(401).json({ error: "Erişim token'ı bulunamadı." });
   }
 
   jwt.verify(token, process.env.JWT_SECRET || "your_jwt_secret", (err, user) => {
     if (err) {
-      console.error("Token doğrulama hatası:", err.message);
       return res.status(403).json({ error: "Geçersiz veya süresi dolmuş token." });
     }
-
-    console.log("Doğrulanan Kullanıcı:", user);
 
     if (!user.isStaff) {
       return res.status(403).json({ error: "Bu işlem için yetkiniz yok. Yalnızca personel erişebilir." });

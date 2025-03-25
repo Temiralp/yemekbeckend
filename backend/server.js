@@ -6,6 +6,10 @@ const config = require("./config/config");
 const authRoutes = require("./routes/authRoutes");
 const addressRoute = require("./routes/addressRoute");
 const productRouter = require("./routes/productRoutes");
+const categoryRouter = require("./routes/categoryRoute");
+const ordersRouter = require("./routes/orderRoute");
+const couponRouter = require("./routes/couponRoute");
+const staffRouter = require("./routes/staffRoute");
 
 const app = express();
 
@@ -21,7 +25,13 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/addresses", addressRoute);
-app.use("/api", productRouter);
+app.use("/api/products", productRouter);
+app.use("/api/categories", categoryRouter);
+app.use("/api/orders", ordersRouter);
+app.use("/api/coupon", couponRouter);
+app.use("/api/staff", staffRouter);
+
+
 
 app.get("/", (req, res) => {
   db.query("SELECT 'Bağlantı başarılı!' AS mesaj", (err, results) => {

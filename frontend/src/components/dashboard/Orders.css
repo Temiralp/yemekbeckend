@@ -1,0 +1,645 @@
+.admin-orders {
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #f0f4f8;
+  font-family: "Poppins", sans-serif;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #0152a4, #012f5e);
+  padding: 15px 20px;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.logout-button {
+  padding: 8px 20px;
+  background-color: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: #c0392b;
+}
+
+/* Sidebar */
+.sidebar {
+  background: #2d4053;
+  color: #fff;
+  padding: 20px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 999;
+  transition: width 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar.open {
+  width: 250px;
+  transform: translateX(0);
+}
+
+.sidebar.closed {
+  width: 70px;
+  transform: translateX(0);
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.sidebar-title {
+  font-size: 1.6rem;
+}
+
+.close-sidebar {
+  display: none;
+  background: none;
+  border: none;
+  color: #dfe6e9;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 5px;
+}
+
+.sidebar-nav a:hover {
+  background-color: #9786865a;
+}
+
+.sidebar-nav a.active {
+  background-color: #3498db;
+}
+
+.sidebar.closed .menu-text {
+  display: none;
+}
+
+.menu-icon {
+  font-size: 1.5rem;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 80px 20px 20px;
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.sidebar-open {
+  margin-left: 250px;
+}
+
+.main-content.sidebar-closed {
+  margin-left: 70px;
+}
+
+/* Orders Section */
+.orders-section {
+  padding: 20px;
+}
+
+.filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.search-bar {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  width: 300px;
+  font-size: 1rem;
+}
+
+.status-filter {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.orders-table th,
+.orders-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.orders-table th {
+  background: #3498db;
+  color: #fff;
+}
+
+.orders-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.status-badge {
+  padding: 5px 10px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.status-pending {
+  background-color: #f39c12;
+}
+
+.status-processing {
+  background-color: #3498db;
+}
+
+.status-delivered {
+  background-color: #2ecc71;
+}
+
+.status-cancelled {
+  background-color: #e74c3c;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-right: 10px;
+}
+
+.edit-btn {
+  color: #3498db;
+}
+
+.edit-btn:hover {
+  color: #2980b9;
+}
+
+.delete-btn {
+  color: #e74c3c;
+}
+
+.delete-btn:hover {
+  color: #c0392b;
+}
+
+.loading,
+.error,
+.no-data {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.1rem;
+}
+
+.loading {
+  color: #3498db;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+.no-data {
+  color: #7f8c8d;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .close-sidebar {
+    display: block;
+  }
+
+  .filters {
+    flex-direction: column;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+}
+
+/* Orders.css */
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0;
+}
+
+.pagination .action-btn {
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 0px;
+  color: #3498db;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.pagination .action-btn:disabled {
+  color: #7f8c8d;
+  cursor: not-allowed;
+}
+
+.pagination .action-btn:hover:not(:disabled) {
+  background-color: #f5f5f5;
+}
+
+.pagination .action-btn.edit-btn {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.pagination .action-btn.edit-btn:hover {
+  background-color: #2980b9;
+}
+/* Edit Panel */
+.edit-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 75%;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.08);
+  z-index: 1001;
+  padding: 30px;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  transform: translateX(0);
+  border-left: 1px solid #e9ecef;
+  display: flex; /* Flexbox kullanarak içeriği düzenle */
+  flex-direction: column; /* Dikey düzen */
+}
+
+/* Edit Panel Header */
+.edit-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #3498db; /* Daha belirgin ve renkli bir alt çizgi */
+  margin-bottom: 25px;
+}
+
+.edit-panel-header h2 {
+  font-size: 1.6rem; /* Biraz daha büyük başlık */
+  color: #2c3e50; /* Daha koyu ve sofistike bir renk */
+  font-weight: 700;
+  letter-spacing: 0.5px; /* Harf aralığı ile şıklık */
+}
+
+.close-edit-panel {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #7f8c8d; /* Daha yumuşak gri ton */
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-edit-panel:hover {
+  color: #e74c3c; /* Kapatma butonuna hover efekti */
+}
+
+/* Edit Panel Content */
+.edit-panel-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px; /* Daha geniş boşluklar */
+}
+
+/* Order Details */
+.order-details {
+  background: #f9fbfc; /* Hafif gri-beyaz tonu */
+  padding: 20px;
+  border-radius: 0px; /* Daha yuvarlak köşeler */
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05); /* Hafif gölge */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-details:hover {
+  transform: translateY(-3px); /* Hover'da hafif yükselme */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); /* Gölge artışı */
+}
+
+/* Spesifik Genişlikler */
+.edit-panel-content .order-details:nth-child(1) {
+  width: 79%;
+}
+.edit-panel-content .order-details:nth-child(2) {
+  width: 18%;
+}
+.edit-panel-content .order-details:nth-child(3) {
+  width: 40%;
+}
+.edit-panel-content .order-details:nth-child(4) {
+  width: 37%;
+}
+.edit-panel-content .order-details:nth-child(5) {
+  width: 18%;
+}
+
+/* Order Details Başlık */
+.order-details h3 {
+  font-size: 1.3rem;
+  color: #34495e; /* Daha koyu ve zarif bir mavi-gri */
+  margin-bottom: 15px;
+  border-bottom: 1px solid #dfe6e9; /* Daha açık bir sınır */
+  padding-bottom: 8px;
+  font-weight: 600;
+}
+
+/* Paragraflar */
+.order-details p {
+  margin: 8px 0; /* Daha dengeli boşluk */
+  font-size: 0.95rem;
+  color: #636e72; /* Daha yumuşak bir gri ton */
+  line-height: 1.5; /* Daha okunabilir satır aralığı */
+}
+
+.order-details p strong {
+  color: #2d4053; /* Daha koyu ve kontrast bir renk */
+  font-weight: 600;
+}
+
+/* Order Item */
+.order-item {
+  border-bottom: 1px dashed #e0e0e0; /* Kesikli çizgi ile modern bir görünüm */
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+/* Order Totals */
+.order-totals {
+  margin-top: 15px;
+  background: #ecf0f1; /* Hafif bir arka plan rengi */
+  padding: 10px;
+  border-radius: 0px;
+}
+
+.order-totals p {
+  font-weight: 600;
+  color: #2c3e50; /* Daha belirgin bir renk */
+}
+
+/* Edit Panel Actions */
+.edit-panel-actions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 15px; /* Butonlar arası boşluk */
+}
+
+/* Delete Button */
+.delete-order-btn {
+  padding: 12px 25px; /* Daha büyük ve rahat bir buton */
+  background-color: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 0px; /* Daha yuvarlak köşeler */
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.delete-order-btn:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .edit-panel {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .edit-panel-content .order-details {
+    width: 100% !important;
+  }
+}
+
+/* Edit Panel */
+.edit-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 75%;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.08);
+  z-index: 1001;
+  padding: 30px;
+  overflow-y: auto;
+  transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out; /* Animasyon için transform ve opacity */
+  transform: translateX(100%); /* Başlangıçta tamamen sağda */
+  opacity: 0; /* Başlangıçta görünmez */
+  border-left: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-panel.open {
+  transform: translateX(0); 
+  opacity: 1;
+}
+
+.edit-panel.closed {
+  transform: translateX(100%);
+  opacity: 0; 
+}
+
+/* Edit Panel Header */
+.edit-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #3498db;
+  margin-bottom: 25px;
+}
+
+.edit-panel-header h2 {
+  font-size: 1.6rem;
+  color: #2c3e50;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.close-edit-panel {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #7f8c8d;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-edit-panel:hover {
+  color: #e74c3c;
+}
+
+/* Edit Panel Content */
+.edit-panel-content {
+  flex: 1;
+  padding-bottom: 70px; /* Action bar ile çakışmayı önlemek için */
+  overflow-y: auto;
+}
+
+/* Edit Panel Action Bar */
+.edit-panel-action-bar {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 75%; /* .edit-panel ile aynı genişlik */
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  padding: 10px 20px;
+  display: flex;
+  gap: 10px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 1002;
+}
+
+/* Action Bar Buttons */
+.action-bar-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.action-bar-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Specific Button Styles */
+.action-bar-btn.print-btn {
+  background-color: #2ecc71;
+  color: #fff;
+}
+
+.action-bar-btn.transfer-btn {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.action-bar-btn.update-status-btn {
+  background-color: #1abc9c;
+  color: #fff;
+}
+
+.action-bar-btn.send-mail-btn {
+  background-color: #9b59b6;
+  color: #fff;
+}
+
+.action-bar-btn.return-btn {
+  background-color: #bdc3c7;
+  color: #fff;
+}
+
+.action-bar-btn.delete-btn {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.action-bar-btn:hover {
+  opacity: 0.9;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .edit-panel {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .edit-panel-action-bar {
+    width: 100%; /* Mobil cihazlarda tam genişlik */
+    right: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .action-bar-btn {
+    flex: 1 1 45%; /* Küçük ekranlarda iki buton yan yana */
+    justify-content: center;
+  }
+}

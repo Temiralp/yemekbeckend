@@ -1,24 +1,28 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import "./App.css";
-import Register from "./components/Register";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import AuthProvider from "./context/AuthContext"; // Default import
+import AdminDashboard from "./components/dashboard/AdminDashboard";
+import AdminOrders from "./components/dashboard/AdminOrders";
+import AdminUsers from "./components/dashboard/AdminUsers";
+import AdminLogin from "./components/AdminLogin";
 import Login from "./components/Login";
-import Address from "./components/Address";
 import VerifyCode from "./components/VerifyCode";
-import Profile from "./components/Profile";
 
-function App() {
+const App = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/address" element={<Address />} />
-        <Route path="/verify-code" element={<VerifyCode />} />
-        <Route path="/profile" element={<Profile />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/verify-code" element={<VerifyCode />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
-}
+};
 
 export default App;
