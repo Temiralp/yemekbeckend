@@ -1,25 +1,18 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate, NavLink, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
-import {
-  FaTachometerAlt,
-  FaShoppingCart,
-  FaUsers,
-  FaCog,
-  FaEdit,
-  FaTrash,
-} from "react-icons/fa";
-import { CiLogout } from "react-icons/ci";
+import { FaEdit, FaTrash } from "react-icons/fa";
 import Sidebar from "./Sidebar";
+import Switch from "react-switch"; // For toggling is_active
 import "./Orders.css";
 
-const AdminUsers = () => {
+const AdminCategories = () => {
   const { admin, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -27,7 +20,7 @@ const AdminUsers = () => {
   const [currentPage, setCurrentPage] = useState(() => {
     return parseInt(searchParams.get("page")) || 1;
   });
-  const usersPerPage = 10;
+  const categoriesPerPage = 10;
 
   useEffect(() => {
     const handleResize = () => {
@@ -45,39 +38,48 @@ const AdminUsers = () => {
   }, [admin, navigate]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchCategories = async () => {
       setLoading(true);
       try {
-        const response = await api.get("/auth/users");
-        setUsers(response.data.users);
-        setFilteredUsers(response.data.users);
+        const response = await api.get("/api/categories");
+        console.log("API Response:", response.data);
+        const categoriesData = response.data.data || [];
+        if (!Array.isArray(categoriesData)) {
+          throw new Error("API'den dönen veri bir dizi değil.");
+        }
+        setCategories(categoriesData);
+        setFilteredCategories(categoriesData);
       } catch (err) {
-        setError(err.response?.data?.error || "Kullanıcılar getirilemedi.");
+        console.error("Fetch Categories Error:", err);
+        console.error("Error Response:", err.response);
+        setError(err.response?.data?.error || "Kategoriler getirilemedi.");
       } finally {
         setLoading(false);
       }
     };
 
     if (admin) {
-      fetchUsers();
+      fetchCategories();
     }
   }, [admin]);
 
   useEffect(() => {
-    let filtered = [...users];
+    let filtered = [...categories];
     if (searchTerm) {
       filtered = filtered.filter(
-        (user) =>
-          user.id.toString().includes(searchTerm) ||
-          user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.phone.includes(searchTerm) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (category) =>
+          category.id.toString().includes(searchTerm) ||
+          (category.name &&
+            category.name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    setFilteredUsers(filtered);
+    setFilteredCategories(filtered);
 
     const pageFromUrl = parseInt(searchParams.get("page")) || 1;
-    if (filtered.length > 0 && pageFromUrl > Math.ceil(filtered.length / usersPerPage)) {
+    if (
+      filtered.length > 0 &&
+      pageFromUrl > Math.ceil(filtered.length / categoriesPerPage)
+    ) {
       setCurrentPage(1);
       setSearchParams({ page: "1" });
     } else if (searchTerm) {
@@ -86,7 +88,7 @@ const AdminUsers = () => {
     } else {
       setCurrentPage(pageFromUrl);
     }
-  }, [searchTerm, users, searchParams, setSearchParams]);
+  }, [searchTerm, categories, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (parseInt(searchParams.get("page")) !== currentPage) {
@@ -94,14 +96,52 @@ const AdminUsers = () => {
     }
   }, [currentPage, searchParams, setSearchParams]);
 
-  const handleDelete = async (userId) => {
-    if (window.confirm("Bu kullanıcıyı silmek istediğinizden emin misiniz?")) {
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  const handleDelete = async (categoryId) => {
+    if (window.confirm("Bu kategoriyi silmek istediğinizden emin misiniz?")) {
       try {
-        await api.delete(`/auth/users/${userId}`);
-        setUsers(users.filter((user) => user.id !== userId));
+        await api.delete(`/api/categories/${categoryId}`);
+        setCategories(
+          categories.filter((category) => category.id !== categoryId)
+        );
       } catch (err) {
-        setError("Kullanıcı silinirken bir hata oluştu.");
+        setError(
+          err.response?.data?.error || "Kategori silinirken bir hata oluştu."
+        );
       }
+    }
+  };
+
+  const handleSwitchChange = async (categoryId, checked) => {
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) {
+      setError("Kategori bulunamadı.");
+      return;
+    }
+
+    const previousCategories = [...categories];
+    setCategories(
+      categories.map((category) =>
+        category.id === categoryId
+          ? { ...category, is_active: checked }
+          : category
+      )
+    );
+
+    try {
+      await api.put(`/api/categories/${categoryId}`, { is_active: checked });
+    } catch (err) {
+      setCategories(previousCategories);
+      const errorMessage =
+        err.response?.data?.error ||
+        "Aktiflik durumu güncellenirken bir hata oluştu.";
+      setError(errorMessage);
     }
   };
 
@@ -114,10 +154,13 @@ const AdminUsers = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const indexOfLastCategory = currentPage * categoriesPerPage;
+  const indexOfFirstCategory = indexOfLastCategory - categoriesPerPage;
+  const currentCategories = filteredCategories.slice(
+    indexOfFirstCategory,
+    indexOfLastCategory
+  );
+  const totalPages = Math.ceil(filteredCategories.length / categoriesPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -175,7 +218,7 @@ const AdminUsers = () => {
             />
           </svg>
         </button>
-        <h1 className="header-title">Kullanıcı Yönetimi</h1>
+        <h1 className="header-title">Kategori Yönetimi</h1>
       </header>
 
       <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
@@ -185,68 +228,80 @@ const AdminUsers = () => {
             ✕
           </button>
         </div>
-        <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-          // handleLogoutClick={x}
-        />
+        <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       </aside>
 
       <main
-        className={`main-content ${isSidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
+        className={`main-content ${
+          isSidebarOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
       >
         <section className="orders-section">
           <div className="filters">
             <input
               type="text"
-              placeholder="ID, Ad, Telefon veya Email ile ara..."
+              placeholder="ID veya Kategori Adı ile ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-bar"
             />
             <div className="add-boss">
-                    <button>Kategori Ekle</button>
+              <button onClick={() => navigate("/admin/categories/add")}>
+                Kategori Ekle
+              </button>
             </div>
           </div>
 
           {loading && <p className="loading">Yükleniyor...</p>}
           {error && <p className="error">{error}</p>}
-          {filteredUsers.length === 0 && !loading && !error && (
-            <p className="no-data">Kullanıcı bulunamadı.</p>
+          {filteredCategories.length === 0 && !loading && !error && (
+            <p className="no-data">Kategori bulunamadı.</p>
           )}
-          {filteredUsers.length > 0 && (
+          {filteredCategories.length > 0 && (
             <>
               <div className="table-wrapper">
                 <table className="orders-table">
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th>Tam Ad</th>
-                      <th>Telefon</th>
-                      <th>Email</th>
+                      <th>Kategori Adı</th>
+                      <th>Durum</th>
                       <th>İşlemler</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td>{user.full_name}</td>
-                        <td>{user.phone}</td>
-                        <td>{user.email}</td>
+                    {currentCategories.map((category) => (
+                      <tr key={category.id}>
+                        <td>{category.id}</td>
+                        <td>{category.name}</td>
+                        <td>{category.is_active ? "Aktif" : "Deaktif"}</td>
                         <td>
                           <button
                             className="action-btn edit-btn"
-                            onClick={() => navigate(`/admin/users/edit/${user.id}`)}
+                            onClick={() =>
+                              navigate(`/admin/categories/edit/${category.id}`)
+                            }
                           >
                             <FaEdit />
                           </button>
                           <button
                             className="action-btn delete-btn"
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDelete(category.id)}
                           >
                             <FaTrash />
                           </button>
+                          <Switch
+                            checked={category.is_active}
+                            onChange={(checked) =>
+                              handleSwitchChange(category.id, checked)
+                            }
+                            offColor="#888"
+                            onColor="#0f0"
+                            offHandleColor="#fff"
+                            onHandleColor="#fff"
+                            height={20}
+                            width={40}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -254,7 +309,10 @@ const AdminUsers = () => {
                 </table>
               </div>
 
-              <div className="pagination" style={{ marginTop: "20px", textAlign: "center" }}>
+              <div
+                className="pagination"
+                style={{ marginTop: "20px", textAlign: "center" }}
+              >
                 <button
                   onClick={handlePrevPage}
                   disabled={currentPage === 1}
@@ -267,7 +325,9 @@ const AdminUsers = () => {
                   <button
                     key={index + 1}
                     onClick={() => handlePageClick(index + 1)}
-                    className={`action-btn ${currentPage === index + 1 ? "edit-btn" : ""}`}
+                    className={`action-btn ${
+                      currentPage === index + 1 ? "edit-btn" : ""
+                    }`}
                     style={{ margin: "0 5px" }}
                   >
                     {index + 1}
@@ -290,4 +350,4 @@ const AdminUsers = () => {
   );
 };
 
-export default AdminUsers;
+export default AdminCategories;

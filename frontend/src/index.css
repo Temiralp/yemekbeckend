@@ -131,8 +131,15 @@ body {
 }
 
 .sidebar.closed {
-  width: 150px; /* Kapalıyken dar */
+  width: 80px; /* Kapalıyken dar */
   transform: translateX(0); /* Büyük ekranlarda hala görünür */
+}
+
+.sidebar.closed .dropdown-toggle{
+          padding: 8px;
+          margin-bottom: 24px;
+          margin-top: -16px;
+          border-radius: 8px;
 }
 
 .sidebar.closed .dropdown-arrow {

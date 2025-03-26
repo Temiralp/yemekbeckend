@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate, NavLink, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 import {
@@ -57,14 +57,19 @@ const AdminOrders = () => {
       setLoading(true);
       try {
         const response = await api.get("/api/orders/all");
-        setOrders(response.data.data);
-        setFilteredOrders(response.data.data);
+        console.log("Orders Response:", response.data);
+        setOrders(response.data.data || []);
+        setFilteredOrders(response.data.data || []);
       } catch (err) {
+        console.error("Fetch Orders Error:", err);
         setError(err.response?.data?.error || "Siparişler getirilemedi.");
       } finally {
         setLoading(false);
       }
     };
+    if (admin) {
+      fetchOrders();
+    }
 
     if (admin) {
       fetchOrders();
@@ -108,6 +113,13 @@ const AdminOrders = () => {
     }
   }, [currentPage, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(
@@ -135,7 +147,9 @@ const AdminOrders = () => {
         setOrders(orders.filter((order) => order.id !== orderId));
         setIsEditPanelOpen(false);
       } catch (err) {
-        setError("Sipariş silinirken bir hata oluştu.");
+        setError(
+          err.response?.data?.error || "Sipariş silinirken bir hata oluştu."
+        );
       }
     }
   };
@@ -147,7 +161,7 @@ const AdminOrders = () => {
 
   const handleCloseEditPanel = () => {
     setIsEditPanelOpen(false);
-    setTimeout(() => setSelectedOrder(null), 500); // Animasyon tamamlandıktan sonra seçili siparişi sıfırla
+    setTimeout(() => setSelectedOrder(null), 500);
   };
 
   const handleLogout = () => {
@@ -159,30 +173,24 @@ const AdminOrders = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Placeholder functions for action bar buttons
   const handlePrint = () => {
     alert("Yazdır butonuna tıklandı!");
-    // Add print functionality here
   };
 
   const handleTransferOrders = () => {
     alert("Siparişleri Aktar butonuna tıklandı!");
-    // Add transfer functionality here
   };
 
   const handleUpdateStatus = () => {
     alert("Durumu Güncelle butonuna tıklandı!");
-    // Add status update functionality here
   };
 
   const handleSendMail = () => {
     alert("Mail Gönder butonuna tıklandı!");
-    // Add send mail functionality here
   };
 
   const handleReturnOperations = () => {
     alert("İade İşlemleri butonuna tıklandı!");
-    // Add return operations functionality here
   };
 
   if (!admin) return null;
@@ -235,11 +243,7 @@ const AdminOrders = () => {
             ✕
           </button>
         </div>
-        <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-          // handleLogoutClick={handleLogoutClick}
-        />
+        <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       </aside>
 
       <main

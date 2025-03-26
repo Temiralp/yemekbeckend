@@ -4,7 +4,7 @@ import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import Sidebar from "./Sidebar";
-import Switch from "react-switch"; // react-switch importu
+import Switch from "react-switch";
 import "./Orders.css";
 
 const AdminProducts = () => {
@@ -48,7 +48,7 @@ const AdminProducts = () => {
           throw new Error("API'den dönen veri bir dizi değil.");
         }
         setProducts(productsData);
-        setFilteredProducts(productsData); // Include all products initially
+        setFilteredProducts(productsData);
       } catch (err) {
         setError(err.message || "Ürünler getirilemedi.");
       } finally {
@@ -79,9 +79,9 @@ const AdminProducts = () => {
 
     const filterActiveStatus = searchParams.get("active");
     if (filterActiveStatus === "true") {
-      filtered = filtered.filter((product) => product.is_active === true); 
+      filtered = filtered.filter((product) => product.is_active === true);
     } else if (filterActiveStatus === "false") {
-      filtered = filtered.filter((product) => product.is_active === false); 
+      filtered = filtered.filter((product) => product.is_active === false);
     }
     setFilteredProducts(filtered);
 
@@ -106,6 +106,14 @@ const AdminProducts = () => {
     }
   }, [currentPage, searchParams, setSearchParams]);
 
+  // Clear error message after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleDelete = async (productId) => {
     if (window.confirm("Bu ürünü silmek istediğinizden emin misiniz?")) {
       try {
@@ -127,17 +135,36 @@ const AdminProducts = () => {
   };
 
   const handleSwitchChange = async (productId, checked) => {
+    // Find the product to check its stock
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      setError("Ürün bulunamadı.");
+      return;
+    }
+
+    // If trying to activate and stock is 0, show an alert and prevent the request
+    if (checked && product.stock === 0) {
+      alert("Stok sıfır olduğu için ürün aktif edilemez. Lütfen önce stok ekleyin.");
+      return;
+    }
+
+    // Optimistically update the UI
+    const previousProducts = [...products];
+    setProducts(
+      products.map((product) =>
+        product.id === productId ? { ...product, is_active: checked } : product
+      )
+    );
+
     try {
       await api.put(`/api/products/${productId}`, { is_active: checked });
-      setProducts(
-        products.map((product) =>
-          product.id === productId
-            ? { ...product, is_active: checked }
-            : product
-        )
-      );
     } catch (err) {
-      setError("Aktiflik durumu güncellenirken bir hata oluştu.");
+      // Revert the optimistic update on error
+      setProducts(previousProducts);
+      // Display the error message from the backend
+      const errorMessage =
+        err.response?.data?.error || "Aktiflik durumu güncellenirken bir hata oluştu.";
+      setError(errorMessage);
     }
   };
 
@@ -318,7 +345,7 @@ const AdminProducts = () => {
                           >
                             <FaTrash />
                           </button>
-                          <Switch
+                          {/* <Switch
                             checked={product.is_active}
                             onChange={(checked) =>
                               handleSwitchChange(product.id, checked)
@@ -329,7 +356,7 @@ const AdminProducts = () => {
                             onHandleColor="#fff"
                             height={20}
                             width={40}
-                          />
+                          /> */}
                         </td>
                       </tr>
                     ))}

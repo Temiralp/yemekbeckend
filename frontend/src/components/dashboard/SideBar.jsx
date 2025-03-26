@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaTachometerAlt,
   FaShoppingCart,
@@ -11,11 +11,15 @@ import { CiLogout } from "react-icons/ci";
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar, handleLogoutClick }) => {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const navigate = useNavigate();
 
   const toggleProductDropdown = () => {
-    setIsProductDropdownOpen(!isProductDropdownOpen);
+    if (!isSidebarOpen) {
+      navigate("/admin/products");
+    } else {
+      setIsProductDropdownOpen(!isProductDropdownOpen);
+    }
   };
-
   return (
     <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
       <div className="sidebar-header">

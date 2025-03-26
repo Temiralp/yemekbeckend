@@ -64,11 +64,6 @@
   transform: translateX(0);
 }
 
-.sidebar.closed {
-  width: 70px;
-  transform: translateX(0);
-}
-
 .sidebar-header {
   display: flex;
   justify-content: space-between;
@@ -1098,6 +1093,557 @@
   background-color: #3d8b40;
 }
 
-.form-group input[type="text"] {
-  text-transform: uppercase;
+/* Orders.css */
+
+/* General Form Styling */
+.coupon-form-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.modern-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.form-group-row-triple .form-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-group-full {
+  width: 100%;
+}
+
+/* Form Inputs */
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  outline: none;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Image Upload */
+.form-group input[type="file"] {
+  padding: 8px;
+  border: none;
+}
+
+.image-preview {
+  margin-top: 10px;
+}
+
+.image-preview img {
+  max-width: 150px;
+  max-height: 150px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* Input Groups for Options and Ingredients */
+.input-group {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.input-group input[type="text"],
+.input-group input[type="number"] {
+  flex: 1;
+  min-width: 150px;
+}
+
+.input-group input[type="number"] {
+  max-width: 150px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  color: #555;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+}
+
+.add-btn {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-btn:hover {
+  background-color: #218838;
+}
+
+/* Item List (Options and Ingredients) */
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.item-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.item-list li:last-child {
+  border-bottom: none;
+}
+
+.item-list span {
+  color: #333;
+}
+
+.remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.remove-btn:hover {
+  background: #c82333;
+}
+
+/* Submit Button */
+.modern-submit-btn {
+  padding: 14px;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.1s;
+}
+
+.modern-submit-btn:hover {
+  background: linear-gradient(90deg, #0056b3, #003d82);
+  transform: translateY(-2px);
+}
+
+.modern-submit-btn:active {
+  transform: translateY(0);
+}
+
+.modern-submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Messages */
+.error {
+  color: #dc3545;
+  background: #f8d7da;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.success {
+  color: #28a745;
+  background: #d4edda;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Orders.css */
+
+/* General Form Styling */
+.coupon-form-section {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.modern-form {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.form-group-row {
+  display: flex;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.form-group-row-triple .form-group {
+  flex: 1;
+  min-width: 220px;
+}
+
+.form-group-full {
+  width: 100%;
+}
+
+/* Form Labels */
+.form-group label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #2c3e50;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+/* Modern Inputs */
+.modern-input,
+.modern-select,
+.modern-textarea {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 16px;
+  color: #333;
+  background: #f9f9f9;
+  transition: all 0.3s ease;
+}
+
+.modern-input:focus,
+.modern-select:focus,
+.modern-textarea:focus {
+  border-color: #007bff;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+  outline: none;
+}
+
+.modern-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Modern Select */
+.modern-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 18px;
+  padding-right: 40px;
+}
+
+/* Category Preview */
+.category-preview {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.category-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.category-preview-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.category-preview-placeholder {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e0e0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.category-preview-item span {
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+/* File Input */
+.modern-file-input {
+  padding: 10px;
+  border: 2px dashed #e0e0e0;
+  border-radius: 10px;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modern-file-input:hover {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.image-preview {
+  margin-top: 15px;
+}
+
+.image-preview img {
+  max-width: 180px;
+  max-height: 180px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  transition: transform 0.3s ease;
+}
+
+.image-preview img:hover {
+  transform: scale(1.05);
+}
+
+/* Input Groups for Options and Ingredients */
+.input-group {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.input-group input[type="text"],
+.input-group input[type="number"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.input-group input[type="number"] {
+  max-width: 180px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  accent-color: #007bff;
+}
+
+/* Modern Add Button */
+.modern-add-btn {
+  padding: 12px 24px;
+  background: linear-gradient(90deg, #28a745, #218838);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modern-add-btn:hover {
+  background: linear-gradient(90deg, #218838, #1e7e34);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-add-btn:active {
+  transform: translateY(0);
+}
+
+/* Modern Item List */
+.modern-item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: #f9f9f9;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+
+.modern-item-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  transition: background 0.3s ease;
+}
+
+.modern-item-list li:last-child {
+  border-bottom: none;
+}
+
+.modern-item-list li:hover {
+  background: #f0f8ff;
+}
+
+.modern-item-list span {
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+/* Modern Remove Button */
+.modern-remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.modern-remove-btn:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+/* Switch Container */
+.switch-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.switch-label {
+  font-size: 14px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.modern-switch {
+  transition: all 0.3s ease;
+}
+
+/* Modern Submit Button */
+.modern-submit-btn {
+  padding: 16px 32px;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 20px;
+}
+
+.modern-submit-btn:hover {
+  background: linear-gradient(90deg, #0056b3, #003d82);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modern-submit-btn:active {
+  transform: translateY(0);
+}
+
+.modern-submit-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Messages */
+.error {
+  color: #dc3545;
+  background: #f8d7da;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 25px;
+  font-weight: 500;
+}
+
+.success {
+  color: #28a745;
+  background: #d4edda;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 25px;
+  font-weight: 500;
 }

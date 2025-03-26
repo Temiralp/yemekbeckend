@@ -1,30 +1,67 @@
 const db = require("../config/db");
 const moment = require("moment");
+const multer = require("multer");
+const path = require("path");
+
+// Multer setup for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Store files in uploads/ directory
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname)); // Unique filename
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png/;
+    const extname = filetypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = filetypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Yalnızca JPEG, JPG ve PNG dosyaları destekleniyor!"));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+}).single("image"); // Expect a single file with field name "image"
+
+// Ensure uploads directory exists
+const fs = require("fs");
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
 
 const getAllProducts = (req, res) => {
   const { category_id } = req.query;
 
   let query = `
-            SELECT 
-              p.id,
-              p.name,
-              p.description,
-              p.base_price,
-              p.image_url,
-              p.options,
-              p.ingredients,
-              p.is_active,
-              p.created_at,
-              p.updated_at,
-              p.category_id,
-              c.name AS category_name
-            FROM 
-              products p
-            JOIN 
-              categories c ON p.category_id = c.id
-            WHERE 
-              c.is_active = TRUE
-          `;
+    SELECT 
+      p.id,
+      p.name,
+      p.description,
+      p.base_price,
+      p.stock,
+      p.image_url,
+      p.options,
+      p.ingredients,
+      p.is_active,
+      p.created_at,
+      p.updated_at,
+      p.category_id,
+      c.name AS category_name
+    FROM 
+      products p
+    JOIN 
+      categories c ON p.category_id = c.id
+    WHERE 
+      c.is_active = TRUE
+  `;
 
   const queryParams = [];
 
@@ -51,29 +88,35 @@ const getAllProducts = (req, res) => {
     });
   });
 };
+
 const getProductById = (req, res) => {
   const productId = req.params.id;
+  const isAdmin = req.user && req.user.role === "admin"; // This might not be working
+
   const query = `
-    SELECT 
-      p.id,
-      p.name,
-      p.description,
-      p.base_price,
-      p.image_url,
-      p.options,
-      p.ingredients,
-      p.is_active,
-      p.created_at,
-      p.updated_at,
-      p.category_id,
-      c.name AS category_name
-    FROM 
-      products p
-    JOIN 
-      categories c ON p.category_id = c.id
-    WHERE 
-      p.id = ? AND p.is_active = TRUE AND c.is_active = TRUE
-  `;
+            SELECT 
+              p.id,
+              p.name,
+              p.description,
+              p.base_price,
+              p.stock,
+              p.image_url,
+              p.options,
+              p.ingredients,
+              p.is_active,
+              p.created_at,
+              p.updated_at,
+              p.category_id,
+              c.name AS category_name
+            FROM 
+              products p
+            JOIN 
+              categories c ON p.category_id = c.id
+            WHERE 
+              p.id = ? ${
+                isAdmin ? "" : "AND p.is_active = TRUE AND c.is_active = TRUE"
+              }
+          `;
 
   db.query(query, [productId], (err, results) => {
     if (err) {
@@ -97,215 +140,403 @@ const getProductById = (req, res) => {
     });
   });
 };
-
 const createProduct = (req, res) => {
-  const {
-    name,
-    description,
-    base_price,
-    image_url,
-    options,
-    ingredients,
-    is_active = true,
-    category_id,
-  } = req.body;
-
-  if (!name || !base_price || !category_id) {
-    return res
-      .status(400)
-      .json({ error: "Ürün adı, temel fiyat ve kategori ID'si zorunludur." });
-  }
-
-  if (options && !Array.isArray(options)) {
-    return res.status(400).json({ error: "Seçenekler bir dizi olmalıdır." });
-  }
-  if (ingredients && !Array.isArray(ingredients)) {
-    return res.status(400).json({ error: "Malzemeler bir dizi olmalıdır." });
-  }
-  if (ingredients) {
-    for (const ing of ingredients) {
-      if (!ing.name || typeof ing.is_default !== "boolean") {
-        return res.status(400).json({
-          error: "Malzemeler {name, is_default} formatında olmalıdır.",
-        });
-      }
+  upload(req, res, (err) => {
+    if (err) {
+      console.error("Dosya yükleme hatası:", err);
+      return res
+        .status(400)
+        .json({ error: err.message || "Dosya yükleme hatası." });
     }
-  }
 
-  db.query(
-    "SELECT * FROM categories WHERE id = ? AND is_active = TRUE",
-    [category_id],
-    (err, categoryResult) => {
-      if (err) {
-        console.error("Kategori sorgulama hatası:", err);
-        return res.status(500).json({ error: "Veritabanı hatası" });
-      }
+    const {
+      name,
+      description,
+      base_price,
+      stock,
+      options,
+      ingredients,
+      is_active = true,
+      category_id,
+    } = req.body;
 
-      if (categoryResult.length === 0) {
-        return res
-          .status(400)
-          .json({ error: "Geçersiz veya aktif olmayan kategori ID'si." });
-      }
-
-      const query = `
-      INSERT INTO products (
-        name,
-        description,
-        base_price,
-        image_url,
-        options,
-        ingredients,
-        is_active,
-        category_id,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-      const values = [
-        name,
-        description || null,
-        base_price,
-        image_url || null,
-        options ? JSON.stringify(options) : null,
-        ingredients ? JSON.stringify(ingredients) : null,
-        is_active,
-        category_id,
-        moment().toDate(),
-        moment().toDate(),
-      ];
-
-      db.query(query, values, (err, result) => {
-        if (err) {
-          console.error("Ürün eklenirken hata oluştu:", err);
-          return res.status(500).json({ error: "Ürün eklenemedi." });
-        }
-
-        res.status(201).json({
-          status: "success",
-          message: "Ürün başarıyla eklendi.",
-          product_id: result.insertId,
-        });
+    // Validation
+    if (!name || !base_price || !stock || !category_id) {
+      return res.status(400).json({
+        error: "Ürün adı, temel fiyat, stok ve kategori ID'si zorunludur.",
       });
     }
-  );
-};
 
-const updateProduct = (req, res) => {
-  const productId = req.params.id;
-  const {
-    name,
-    description,
-    base_price,
-    image_url,
-    options,
-    ingredients,
-    is_active,
-    category_id,
-  } = req.body;
+    if (isNaN(base_price) || base_price <= 0) {
+      return res
+        .status(400)
+        .json({ error: "Temel fiyat pozitif bir sayı olmalı." });
+    }
 
-  db.query(
-    "SELECT * FROM products WHERE id = ?",
-    [productId],
-    (err, results) => {
-      if (err) {
-        console.error("Ürün sorgulama hatası:", err);
-        return res.status(500).json({ error: "Veritabanı hatası" });
-      }
+    if (isNaN(stock) || stock < 0) {
+      return res.status(400).json({ error: "Stok negatif olamaz." });
+    }
 
-      if (results.length === 0) {
-        return res.status(404).json({ error: "Ürün bulunamadı" });
-      }
-
-      if (options && !Array.isArray(options)) {
-        return res
-          .status(400)
-          .json({ error: "Seçenekler bir dizi olmalıdır." });
-      }
-      if (ingredients && !Array.isArray(ingredients)) {
-        return res
-          .status(400)
-          .json({ error: "Malzemeler bir dizi olmalıdır." });
-      }
-      if (ingredients) {
-        for (const ing of ingredients) {
-          if (!ing.name || typeof ing.is_default !== "boolean") {
+    if (options) {
+      try {
+        const parsedOptions = JSON.parse(options);
+        if (!Array.isArray(parsedOptions)) {
+          return res
+            .status(400)
+            .json({ error: "Seçenekler bir dizi olmalıdır." });
+        }
+        for (const opt of parsedOptions) {
+          if (
+            !opt.name ||
+            typeof opt.is_default !== "boolean" ||
+            typeof opt.priceModifier !== "number"
+          ) {
             return res.status(400).json({
-              error: "Malzemeler {name, is_default} formatında olmalıdır.",
+              error:
+                "Seçenekler {name, is_default, priceModifier} formatında olmalıdır.",
+            });
+          }
+          if (opt.priceModifier < 0) {
+            return res
+              .status(400)
+              .json({ error: "priceModifier negatif olamaz." });
+          }
+        }
+        // Ensure only one option is default
+        const defaultOptions = parsedOptions.filter((opt) => opt.is_default);
+        if (defaultOptions.length > 1) {
+          return res
+            .status(400)
+            .json({ error: "Yalnızca bir seçenek varsayılan olabilir." });
+        }
+      } catch (e) {
+        return res
+          .status(400)
+          .json({ error: "Seçenekler geçersiz JSON formatında." });
+      }
+    }
+
+    if (ingredients) {
+      try {
+        const parsedIngredients = JSON.parse(ingredients);
+        if (!Array.isArray(parsedIngredients)) {
+          return res
+            .status(400)
+            .json({ error: "Malzemeler bir dizi olmalıdır." });
+        }
+        for (const ing of parsedIngredients) {
+          if (!ing.name) {
+            return res.status(400).json({
+              error: "Malzemeler {name} formatında olmalıdır.",
             });
           }
         }
+      } catch (e) {
+        return res
+          .status(400)
+          .json({ error: "Malzemeler geçersiz JSON formatında." });
       }
+    }
 
-      if (category_id) {
-        db.query(
-          "SELECT * FROM categories WHERE id = ? AND is_active = TRUE",
-          [category_id],
-          (err, categoryResult) => {
-            if (err) {
-              console.error("Kategori sorgulama hatası:", err);
-              return res.status(500).json({ error: "Veritabanı hatası" });
-            }
+    // Check if category exists and is active
+    db.query(
+      "SELECT * FROM categories WHERE id = ? AND is_active = TRUE",
+      [category_id],
+      (err, categoryResult) => {
+        if (err) {
+          console.error("Kategori sorgulama hatası:", err);
+          return res.status(500).json({ error: "Veritabanı hatası" });
+        }
 
-            if (categoryResult.length === 0) {
-              return res
-                .status(400)
-                .json({ error: "Geçersiz veya aktif olmayan kategori ID'si." });
-            }
+        if (categoryResult.length === 0) {
+          return res
+            .status(400)
+            .json({ error: "Geçersiz veya aktif olmayan kategori ID'si." });
+        }
 
-            updateProductDetails();
-          }
-        );
-      } else {
-        updateProductDetails();
-      }
+        const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
-      function updateProductDetails() {
         const query = `
-        UPDATE products 
-        SET 
-          name = ?,
-          description = ?,
-          base_price = ?,
-          image_url = ?,
-          options = ?,
-          ingredients = ?,
-          is_active = ?,
-          category_id = ?,
-          updated_at = ?
-        WHERE 
-          id = ?
-      `;
+                  INSERT INTO products (
+                    name,
+                    description,
+                    base_price,
+                    stock,
+                    image_url,
+                    options,
+                    ingredients,
+                    is_active,
+                    category_id,
+                    created_at,
+                    updated_at
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
 
         const values = [
-          name || results[0].name,
-          description !== undefined ? description : results[0].description,
-          base_price || results[0].base_price,
-          image_url !== undefined ? image_url : results[0].image_url,
-          options ? JSON.stringify(options) : results[0].options,
-          ingredients ? JSON.stringify(ingredients) : results[0].ingredients,
-          is_active !== undefined ? is_active : results[0].is_active,
-          category_id || results[0].category_id,
+          name,
+          description || null,
+          Number(base_price),
+          Number(stock),
+          image_url,
+          options || null,
+          ingredients || null,
+          is_active,
+          category_id,
           moment().toDate(),
-          productId,
+          moment().toDate(),
         ];
 
         db.query(query, values, (err, result) => {
           if (err) {
-            console.error("Ürün güncellenirken hata oluştu:", err);
-            return res.status(500).json({ error: "Ürün güncellenemedi." });
+            console.error("Ürün eklenirken hata oluştu:", err);
+            return res.status(500).json({ error: "Ürün eklenemedi." });
           }
 
-          res.status(200).json({
+          res.status(201).json({
             status: "success",
-            message: "Ürün başarıyla güncellendi.",
+            message: "Ürün başarıyla eklendi.",
+            product_id: result.insertId,
           });
         });
       }
-    }
-  );
+    );
+  });
 };
 
+const updateProduct = (req, res) => {
+  upload(req, res, (err) => {
+    if (err) {
+      console.error("Dosya yükleme hatası:", err);
+      return res
+        .status(400)
+        .json({ error: err.message || "Dosya yükleme hatası." });
+    }
+
+    const productId = req.params.id;
+    const {
+      name,
+      description,
+      base_price,
+      stock,
+      options,
+      ingredients,
+      is_active,
+      category_id,
+    } = req.body;
+
+    // Convert is_active string to numeric boolean
+    const isActiveBoolean = is_active === "true" ? 1 : 0;
+    console.log(
+      "Received is_active:",
+      is_active,
+      "Converted to:",
+      isActiveBoolean
+    );
+
+    db.query(
+      "SELECT * FROM products WHERE id = ?",
+      [productId],
+      (err, results) => {
+        if (err) {
+          console.error("Ürün sorgulama hatası:", err);
+          return res.status(500).json({ error: "Veritabanı hatası" });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({ error: "Ürün bulunamadı" });
+        }
+
+        const existingProduct = results[0];
+
+        // Validation
+        if (base_price && (isNaN(base_price) || base_price <= 0)) {
+          return res
+            .status(400)
+            .json({ error: "Temel fiyat pozitif bir sayı olmalı." });
+        }
+
+        if (stock && (isNaN(stock) || stock < 0)) {
+          return res.status(400).json({ error: "Stok negatif olamaz." });
+        }
+
+        if (options) {
+          try {
+            const parsedOptions = JSON.parse(options);
+            if (!Array.isArray(parsedOptions)) {
+              return res
+                .status(400)
+                .json({ error: "Seçenekler bir dizi olmalıdır." });
+            }
+            for (const opt of parsedOptions) {
+              if (
+                !opt.name ||
+                typeof opt.is_default !== "boolean" ||
+                typeof opt.priceModifier !== "number"
+              ) {
+                return res.status(400).json({
+                  error:
+                    "Seçenekler {name, is_default, priceModifier} formatında olmalıdır.",
+                });
+              }
+              if (opt.priceModifier < 0) {
+                return res
+                  .status(400)
+                  .json({ error: "priceModifier negatif olamaz." });
+              }
+            }
+            const defaultOptions = parsedOptions.filter(
+              (opt) => opt.is_default
+            );
+            if (defaultOptions.length > 1) {
+              return res
+                .status(400)
+                .json({ error: "Yalnızca bir seçenek varsayılan olabilir." });
+            }
+          } catch (e) {
+            return res
+              .status(400)
+              .json({ error: "Seçenekler geçersiz JSON formatında." });
+          }
+        }
+
+        if (ingredients) {
+          try {
+            const parsedIngredients = JSON.parse(ingredients);
+            if (!Array.isArray(parsedIngredients)) {
+              return res
+                .status(400)
+                .json({ error: "Malzemeler bir dizi olmalıdır." });
+            }
+            for (const ing of parsedIngredients) {
+              if (!ing.name) {
+                return res.status(400).json({
+                  error: "Malzemeler {name} formatında olmalıdır.",
+                });
+              }
+            }
+          } catch (e) {
+            return res
+              .status(400)
+              .json({ error: "Malzemeler geçersiz JSON formatında." });
+          }
+        }
+
+        if (category_id) {
+          db.query(
+            "SELECT * FROM categories WHERE id = ? AND is_active = TRUE",
+            [category_id],
+            (err, categoryResult) => {
+              if (err) {
+                console.error("Kategori sorgulama hatası:", err);
+                return res.status(500).json({ error: "Veritabanı hatası" });
+              }
+
+              if (categoryResult.length === 0) {
+                return res.status(400).json({
+                  error: "Geçersiz veya aktif olmayan kategori ID'si.",
+                });
+              }
+
+              updateProductDetails();
+            }
+          );
+        } else {
+          updateProductDetails();
+        }
+
+        function updateProductDetails() {
+          const image_url = req.file
+            ? `/uploads/${req.file.filename}`
+            : existingProduct.image_url;
+
+          if (req.file && existingProduct.image_url) {
+            const oldImagePath = path.join(
+              __dirname,
+              "..",
+              existingProduct.image_url
+            );
+            fs.unlink(oldImagePath, (err) => {
+              if (err) {
+                console.error("Eski resim silinirken hata oluştu:", err);
+              }
+            });
+          }
+
+          // Check stock and prevent setting is_active = 1 if stock = 0
+          const stockValue =
+            stock !== undefined ? Number(stock) : existingProduct.stock;
+          if (stockValue === 0 && isActiveBoolean === 1) {
+            return res.status(400).json({
+              error: "Stok sıfır olduğu için ürün aktif edilemez.",
+            });
+          }
+
+          const query = `
+                    UPDATE products 
+                    SET 
+                      name = ?,
+                      description = ?,
+                      base_price = ?,
+                      stock = ?,
+                      image_url = ?,
+                      options = ?,
+                      ingredients = ?,
+                      is_active = ?,
+                      category_id = ?,
+                      updated_at = ?
+                    WHERE 
+                      id = ?
+                  `;
+
+          const values = [
+            name || existingProduct.name,
+            description !== undefined
+              ? description
+              : existingProduct.description,
+            base_price || existingProduct.base_price,
+            stockValue,
+            image_url,
+            options || existingProduct.options,
+            ingredients || existingProduct.ingredients,
+            isActiveBoolean, // Use the converted numeric boolean
+            category_id || existingProduct.category_id,
+            moment().toDate(),
+            productId,
+          ];
+
+          console.log("Updating product with values:", values);
+
+          db.query(query, values, (err, result) => {
+            if (err) {
+              console.error("Ürün güncellenirken hata oluştu:", err);
+              return res.status(500).json({ error: "Ürün güncellenemedi." });
+            }
+
+            // Check the final state
+            db.query(
+              `SELECT is_active, stock FROM products WHERE id = ?`,
+              [productId],
+              (err, finalResult) => {
+                if (err) {
+                  console.error("Son durumu kontrol ederken hata oluştu:", err);
+                } else {
+                  console.log(
+                    `Product ID ${productId} final state - is_active: ${finalResult[0].is_active}, stock: ${finalResult[0].stock}`
+                  );
+                }
+
+                res.status(200).json({
+                  status: "success",
+                  message: "Ürün başarıyla güncellendi.",
+                });
+              }
+            );
+          });
+        }
+      }
+    );
+  });
+};
 const deleteProduct = (req, res) => {
   const productId = req.params.id;
 
