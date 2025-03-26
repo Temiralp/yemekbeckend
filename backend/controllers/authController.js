@@ -7,6 +7,8 @@ const moment = require("moment");
 const register = async (req, res) => {
   const { name, surname, phone, email } = req.body;
   const fullName = `${name} ${surname}`;
+  const verificationCode = "123456";
+  const expiresAt = moment().add(3, "minutes").toDate(); 
 
   try {
     db.query(
@@ -17,8 +19,25 @@ const register = async (req, res) => {
           console.error("Kullanıcı ekleme hatası:", err);
           return res.status(500).json({ error: "Kullanıcı kaydedilemedi." });
         }
+        db.query(
+          "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
+          [phone, verificationCode, "registration", expiresAt],
+          (err, result) => {
+            if (err) {
+              console.error("Doğrulama kodu ekleme hatası:", err);
+              return res
+                .status(500)
+                .json({ error: "Doğrulama kodu kaydedilemedi." });
+            }
 
-        res.json({ message: "Kayıt başarılı!" });
+            console.log("SMS Gönderim Şablonu:");
+            console.log(
+              `Telefon: ${phone}, Doğrulama Kodu: ${verificationCode}`
+            );
+
+            res.json({ message: "Kayıt başarılı! Doğrulama kodu gönderildi." });
+          }
+        );
       }
     );
   } catch (err) {
@@ -33,7 +52,7 @@ const login = async (req, res) => {
   if (!phone) {
     return res.status(400).json({ error: "Telefon numarası zorunludur." });
   }
- 
+
   try {
     db.query("SELECT * FROM users WHERE phone = ?", [phone], (err, result) => {
       if (err) {
@@ -302,5 +321,5 @@ module.exports = {
   verifyCode,
   guestLogin,
   logout,
-  getAllUsers, 
+  getAllUsers,
 };
