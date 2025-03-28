@@ -6,11 +6,13 @@ import {
   FaUsers,
   FaCog,
   FaAngleDown,
+  FaImage
 } from "react-icons/fa";
 import { CiLogout } from "react-icons/ci";
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar, handleLogoutClick }) => {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const [isMainPageDropdownOpen, setIsMainPageDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   const toggleProductDropdown = () => {
@@ -20,6 +22,14 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar, handleLogoutClick }) => {
       setIsProductDropdownOpen(!isProductDropdownOpen);
     }
   };
+  const toggleMainPageDropdown = () => {
+    if (!isSidebarOpen) {
+      navigate("/admin/main-page");
+    } else {
+      setIsMainPageDropdownOpen(!isMainPageDropdownOpen);
+    }
+  };
+
   return (
     <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
       <div className="sidebar-header">
@@ -94,6 +104,34 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar, handleLogoutClick }) => {
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     <span className="menu-text">Kategoriler</span>
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
+          </li>
+          <li className="dropdown">
+            <div className="dropdown-toggle" onClick={toggleMainPageDropdown}>
+              <FaImage className="menu-icon" />
+              <span className="menu-text">Ana Sayfa Yönetimi</span>
+              <FaAngleDown
+                className={`dropdown-arrow ${
+                  isMainPageDropdownOpen ? "open" : ""
+                }`}
+              />
+            </div>
+            <div
+              className={`dropdown-menu-container ${
+                isMainPageDropdownOpen ? "open" : ""
+              }`}
+            >
+              <ul className="dropdown-menu">
+                <li>
+                  <NavLink
+                    to="/admin/main-page/slider"
+                    onClick={toggleSidebar}
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    <span className="menu-text">Slider Yönetimi</span>
                   </NavLink>
                 </li>
               </ul>

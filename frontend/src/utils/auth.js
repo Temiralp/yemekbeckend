@@ -1,13 +1,10 @@
-import { jwtDecode } from "jwt-decode";
-
 export const isTokenExpired = (token) => {
-  if (!token) return true; 
   try {
-    const decoded = jwtDecode(token);
-    const currentTime = Date.now() / 1000; 
-    return decoded.exp < currentTime;
+    const decoded = JSON.parse(atob(token.split(".")[1]));
+    const exp = decoded.exp * 1000; // Saniyeyi milisaniyeye çevir
+    return Date.now() > exp;
   } catch (error) {
-    console.error("Token decode hatası:", error);
-    return true; 
+    console.error("Token çözümleme hatası:", error);
+    return true; // Hata varsa token'ı geçersiz say
   }
 };

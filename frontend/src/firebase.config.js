@@ -1,11 +1,13 @@
-// firebase.js
+// firebase.config.js
 import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 import {
   getAuth,
-  signInWithPhoneNumber,
   RecaptchaVerifier,
+  signInWithPhoneNumber,
 } from "firebase/auth";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyC7na3OrjLeivY_fFcVWDiwbAkahg4RIv4",
   authDomain: "restorant-d296e.firebaseapp.com",
@@ -15,8 +17,10 @@ const firebaseConfig = {
   appId: "1:386477847911:web:874353ea511577d0dc6bc2",
   measurementId: "G-MHJG3NZ50H",
 };
-
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+const analytics = getAnalytics(app);
+const auth = getAuth(app); // Authentication nesnesini başlat
 
-export { signInWithPhoneNumber, RecaptchaVerifier };
+// Export necessary modules
+export { auth, RecaptchaVerifier, signInWithPhoneNumber };

@@ -1,15 +1,17 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext"; // AuthContext'inizin yolunu kontrol edin
-import api from "../services/api"; // API servis dosyanızın yolunu kontrol edin
-import "./Products.css"; // Stil dosyası (isteğe bağlı, aşağıda açıklayacağım)
+import { AuthContext } from "../context/AuthContext";
+import api from "../services/api";
+import "./Products.css";
 
 const Products = () => {
-  const { admin, user, logout } = useContext(AuthContext); // Kullanıcı ve admin bilgisi
+  const { user, userType, addToCartForGuest } = useContext(AuthContext);
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  console.log("Products bileşeni yüklendi. user:", user, "userType:", userType);
 
   // Ürünleri yükle
   useEffect(() => {
@@ -31,27 +33,38 @@ const Products = () => {
     fetchProducts();
   }, []);
 
-  // Sipariş oluşturma fonksiyonu
-  const handleCreateOrder = async (productId) => {
-    if (!user) {
-      // Kullanıcı giriş yapmamışsa login sayfasına yönlendir
+  // Sepete ekleme fonksiyonu
+  const handleAddToCart = async (productId) => {
+    console.log("handleAddToCart çağrıldı. user:", user, "userType:", userType);
+
+    if (!user && userType !== "guest") {
+      console.log("Kullanıcı giriş yapmamış ve misafir değil. Yönlendiriliyor...");
       navigate("/auth/login");
       return;
     }
 
     try {
-      const orderData = {
-        product_id: productId,
-        quantity: 1, // Varsayılan olarak 1 adet sipariş
-        // Adres gibi ek bilgiler gerekiyorsa buraya eklenebilir
-      };
-      const response = await api.post("/api/orders/", orderData);
-      alert(response.data.message || "Sipariş başarıyla oluşturuldu!");
-      // İsteğe bağlı: Sipariş sonrası başka bir sayfaya yönlendirme
-      // navigate("/orders"); 
+      if (userType === "guest") {
+        console.log("Misafir kullanıcı için sepete ekleme yapılıyor...");
+        addToCartForGuest(productId);
+        alert("Ürün sepete başarıyla eklendi!");
+      } else if (userType === "registered" && user?.id) {
+        console.log("Kayıtlı kullanıcı için API isteği gönderiliyor...");
+        const cartData = {
+          product_id: productId,
+          quantity: 1,
+        };
+
+        const response = await api.post("/api/products/add-to-cart", cartData);
+        console.log("Sepete ekleme yanıtı:", response.data);
+        alert(response.data.message || "Ürün sepete başarıyla eklendi!");
+      } else {
+        throw new Error("Kullanıcı bilgisi eksik veya geçersiz.");
+      }
     } catch (err) {
+      console.error("Sepete ekleme hatası:", err);
       setError(
-        err.response?.data?.error || "Sipariş oluşturulurken bir hata oluştu."
+        err.response?.data?.error || err.message || "Sepete eklerken bir hata oluştu."
       );
     }
   };
@@ -83,10 +96,10 @@ const Products = () => {
               <p>Fiyat: {product.base_price} TL</p>
               <p>Stok: {product.stock}</p>
               <button
-                className="order-btn"
-                onClick={() => handleCreateOrder(product.id)}
+                className="add-to-cart-btn"
+                onClick={() => handleAddToCart(product.id)}
               >
-                Sipariş Oluştur
+                Sepete Ekle
               </button>
             </div>
           ))}

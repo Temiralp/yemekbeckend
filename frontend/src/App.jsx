@@ -9,6 +9,7 @@ import Register from "./components/Register";
 import VerifyCode from "./components/VerifyCode";
 import AdminSettings from "./components/dashboard/AdminSettings"
 import AdminCategories from "./components/dashboard/AdminCategories"
+import AdminMainPageSlider from "./components/dashboard/AdminMainPageSlider"
 import Profile from "./components/Profile";
 import AdminProducts from "./components/dashboard/AdminProducts"
 import AddProduct from "./components/dashboard/ADD/AddProduct"
@@ -19,6 +20,7 @@ import EditProduct from "./components/dashboard/ADD/EditProduct";
 import AddCategory from "./components/dashboard/ADD/AddCategories";
 import EditCategory from "./components/dashboard/ADD/EditCategories";
 import Products from "./components/Products";
+import Address from "./components/Address";
 
 const App = () => {
   return (
@@ -30,6 +32,8 @@ const App = () => {
           <Route path="/admin/orders" element={<AdminOrders />} />
 
           <Route path="/admin/users" element={<AdminUsers />} />
+
+          <Route path="/admin/main-page/slider" element={<AdminMainPageSlider />} />
 
           <Route path="/admin/settings" element={<AdminSettings />} />
 
@@ -54,6 +58,7 @@ const App = () => {
           <Route path="/verify-code" element={<VerifyCode />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/address" element={<Address />} />
         </Routes>
   );
 };

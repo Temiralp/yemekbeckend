@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import api from "../services/api";
 
 function VerifyCode() {
+  const { loginUser } = useContext(AuthContext);
   const [verificationCode, setVerificationCode] = useState("");
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(180);
@@ -41,18 +43,19 @@ function VerifyCode() {
     setError("");
 
     try {
-      const response = await axios.post(
-        "http://localhost:3000/auth/verify-code",
-        {
-          phone,
-          code: verificationCode,
-        }
-      );
+      const response = await api.post("/auth/verify-code", {
+        phone,
+        code: verificationCode,
+      });
       console.log("Doğrulama yanıtı:", response.data);
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user_id", response.data.user_id);
-      localStorage.setItem("user_type", response.data.user_type);
+      const { token, user_id, user_type } = response.data;
+
+      // userData nesnesini oluştururken tüm gerekli bilgileri ekliyoruz
+      const userData = { id: user_id, user_type };
+      console.log("loginUser çağrılıyor. userData:", userData, "isGuest:", user_type === "guest");
+
+      loginUser(token, userData, user_type === "guest");
 
       alert("Giriş başarılı!");
       navigate("/profile");

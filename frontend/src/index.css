@@ -131,24 +131,25 @@ body {
 }
 
 .sidebar.closed {
-  width: 80px; /* Kapalıyken dar */
+  width: 120px; /* Kapalıyken dar */
   transform: translateX(0); /* Büyük ekranlarda hala görünür */
+  overflow-y: auto;
 }
 
-.sidebar.closed .dropdown-toggle{
-          padding: 8px;
-          margin-bottom: 24px;
-          margin-top: -16px;
-          border-radius: 8px;
+.sidebar.closed .dropdown-toggle {
+  padding: 8px;
+  margin-bottom: 24px;
+  margin-top: -16px;
+  border-radius: 8px;
 }
 
 .sidebar.closed .dropdown-arrow {
   display: none;
 }
-.sidebar.closed .dropdown-toggle{
-          display: flex;
-          align-items: center;
-          justify-content: center;
+.sidebar.closed .dropdown-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-header {

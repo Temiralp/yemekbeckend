@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext } from "../../context/AuthContext"; // Birleşik context
 import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -15,6 +15,7 @@ import {
 } from "chart.js";
 import { FaShoppingCart, FaUsers, FaMoneyBillWave } from "react-icons/fa";
 import Sidebar from "./Sidebar";
+import api from "../../services/api";
 
 ChartJS.register(
   CategoryScale,
@@ -28,19 +29,19 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
-  const { admin, logout } = useContext(AuthContext);
+  const { admin, token, logout } = useContext(AuthContext); // token da alınıyor
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
-  const [remainingTime, setRemainingTime] = useState(3600);
-
+  const [remainingTime, setRemainingTime] = useState(3600); // 1 saat
   const [dashboardData, setDashboardData] = useState({
-    totalOrders: 120,
-    totalRevenue: 45000,
-    activeUsers: 85,
+    totalOrders: 0,
+    totalRevenue: 0,
+    activeUsers: 0,
   });
 
+  // Sidebar responsive kontrolü
   useEffect(() => {
     const handleResize = () => {
       setIsSidebarOpen(window.innerWidth > 1024);
@@ -50,14 +51,17 @@ const AdminDashboard = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Admin kontrolü ve oturum başlatma
   useEffect(() => {
-    if (!admin) {
+    if (!admin || !token) {
       navigate("/admin/login");
     } else {
       setSessionStartTime(Date.now());
+      fetchDashboardData(); // Verileri çek
     }
-  }, [admin, navigate]);
+  }, [admin, token, navigate]);
 
+  // Oturum süresi sayacı
   useEffect(() => {
     let timer;
     if (sessionStartTime) {
@@ -75,6 +79,22 @@ const AdminDashboard = () => {
     }
     return () => clearInterval(timer);
   }, [sessionStartTime, logout, navigate]);
+
+  // Dashboard verilerini API'den çekme
+  const fetchDashboardData = async () => {
+    try {
+      const response = await api.get("/api/admin/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDashboardData({
+        totalOrders: response.data.totalOrders || 0,
+        totalRevenue: response.data.totalRevenue || 0,
+        activeUsers: response.data.activeUsers || 0,
+      });
+    } catch (err) {
+      console.error("Dashboard verisi alınamadı:", err);
+    }
+  };
 
   const handleLogoutClick = (e) => {
     e.preventDefault();
@@ -106,7 +126,7 @@ const AdminDashboard = () => {
     datasets: [
       {
         label: "Aylık Sipariş Sayısı",
-        data: [30, 45, 60, 50, 70, 90],
+        data: [30, 45, 60, 50, 70, 90], // API'den dinamik gelebilir
         borderColor: "#3498db",
         backgroundColor: "rgba(52, 152, 219, 0.2)",
         fill: true,
@@ -120,7 +140,7 @@ const AdminDashboard = () => {
     datasets: [
       {
         label: "Aylık Gelir (TL)",
-        data: [5000, 7000, 9000, 6000, 8000, 12000],
+        data: [5000, 7000, 9000, 6000, 8000, 12000], // API'den dinamik gelebilir
         backgroundColor: "#2ecc71",
         borderColor: "#27ae60",
         borderWidth: 1,
@@ -182,7 +202,7 @@ const AdminDashboard = () => {
       <Sidebar
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
-//         handleLogoutClick={handleLogoutClick}
+        handleLogoutClick={handleLogoutClick} // Yorum satırı kaldırıldı
       />
 
       <main

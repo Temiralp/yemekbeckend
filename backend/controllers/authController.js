@@ -1,43 +1,37 @@
+const admin = require("firebase-admin");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const config = require("../config/config");
 const moment = require("moment");
 
+const serviceAccount = require("../config/restorant-d296e-firebase-adminsdk-fbsvc-8384464a47.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
 const register = async (req, res) => {
   const { name, surname, phone, email } = req.body;
   const fullName = `${name} ${surname}`;
   const verificationCode = "123456";
-  const expiresAt = moment().add(3, "minutes").toDate(); 
+  const expiresAt = moment().add(3, "minutes").toDate();
 
   try {
     db.query(
-      "INSERT INTO users (full_name, phone, email) VALUES (?, ?, ?)",
-      [fullName, phone, email],
+      "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
+      [phone, verificationCode, "registration", expiresAt],
       (err, result) => {
         if (err) {
-          console.error("Kullanıcı ekleme hatası:", err);
-          return res.status(500).json({ error: "Kullanıcı kaydedilemedi." });
+          console.error("Doğrulama kodu ekleme hatası:", err);
+          return res
+            .status(500)
+            .json({ error: "Doğrulama kodu kaydedilemedi." });
         }
-        db.query(
-          "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
-          [phone, verificationCode, "registration", expiresAt],
-          (err, result) => {
-            if (err) {
-              console.error("Doğrulama kodu ekleme hatası:", err);
-              return res
-                .status(500)
-                .json({ error: "Doğrulama kodu kaydedilemedi." });
-            }
 
-            console.log("SMS Gönderim Şablonu:");
-            console.log(
-              `Telefon: ${phone}, Doğrulama Kodu: ${verificationCode}`
-            );
+        console.log("SMS Gönderim Şablonu:");
+        console.log(`Telefon: ${phone}, Doğrulama Kodu: ${verificationCode}`);
 
-            res.json({ message: "Kayıt başarılı! Doğrulama kodu gönderildi." });
-          }
-        );
+        res.json({ message: "Kayıt başarılı! Doğrulama kodu gönderildi." });
       }
     );
   } catch (err) {
@@ -47,59 +41,55 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { phone } = req.body;
-
-  if (!phone) {
-    return res.status(400).json({ error: "Telefon numarası zorunludur." });
-  }
+  const { idToken } = req.body;
 
   try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const phone = decodedToken.phone_number;
+
     db.query("SELECT * FROM users WHERE phone = ?", [phone], (err, result) => {
       if (err) {
         console.error("Kullanıcı sorgulama hatası:", err);
         return res.status(500).json({ error: "Kullanıcı sorgulanamadı." });
       }
 
+      let userId;
       if (result.length === 0) {
-        return res.status(404).json({
-          error: "Bu telefon numarasına sahip bir kullanıcı bulunamadı.",
-        });
-      }
-
-      const verificationCode = "123456";
-      const expiresAt = moment().add(3, "minutes").toDate();
-
-      db.query(
-        "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
-        [phone, verificationCode, "login", expiresAt],
-        (err, result) => {
-          if (err) {
-            console.error("Doğrulama kodu ekleme hatası:", err);
-            return res
-              .status(500)
-              .json({ error: "Doğrulama kodu kaydedilemedi." });
+        db.query(
+          "INSERT INTO users (phone) VALUES (?)",
+          [phone],
+          (err, insertResult) => {
+            if (err) {
+              return res
+                .status(500)
+                .json({ error: "Kullanıcı kaydedilemedi." });
+            }
+            userId = insertResult.insertId;
+            createSessionAndRespond(userId, null, "registered", req, res);
           }
-
-          console.log("SMS Gönderim Şablonu:");
-          console.log(`Telefon: ${phone}, Doğrulama Kodu: ${verificationCode}`);
-
-          res.json({ message: "Doğrulama kodu gönderildi." });
-        }
-      );
+        );
+      } else {
+        userId = result[0].id;
+        createSessionAndRespond(userId, null, "registered", req, res);
+      }
     });
   } catch (err) {
-    console.error("Giriş genel hatası:", err);
-    res.status(500).json({ error: "Giriş işlemi sırasında hata oluştu." });
+    console.error("Token doğrulama hatası:", err);
+    res.status(401).json({ error: "Geçersiz token." });
   }
 };
 
 const verifyCode = async (req, res) => {
-  const { phone, code } = req.body;
+  const { phone, code, purpose, name, surname, email } = req.body;
+
+  if (!phone || !code || !purpose) {
+    return res.status(400).json({ error: "Eksik parametreler." });
+  }
 
   try {
     db.query(
       "SELECT * FROM verification_codes WHERE phone = ? AND code = ? AND purpose = ? AND used = 0 AND expires_at > ?",
-      [phone, code, "login", moment().toDate()],
+      [phone, code, purpose, moment().toDate()],
       (err, result) => {
         if (err) {
           console.error("Doğrulama kodu kontrol hatası:", err);
@@ -115,9 +105,9 @@ const verifyCode = async (req, res) => {
         }
 
         db.query(
-          "UPDATE verification_codes SET used = 1 WHERE phone = ? AND code = ?",
-          [phone, code],
-          (err, result) => {
+          "UPDATE verification_codes SET used = 1 WHERE phone = ? AND code = ? AND purpose = ?",
+          [phone, code, purpose],
+          (err, updateResult) => {
             if (err) {
               console.error("Kodu güncelleme hatası:", err);
               return res
@@ -125,20 +115,50 @@ const verifyCode = async (req, res) => {
                 .json({ error: "Doğrulama kodu kullanılırken hata oluştu." });
             }
 
-            db.query(
-              "SELECT * FROM users WHERE phone = ?",
-              [phone],
-              (err, userResult) => {
-                if (err || userResult.length === 0) {
-                  return res
-                    .status(500)
-                    .json({ error: "Kullanıcı bulunamadı." });
-                }
+            if (purpose === "login") {
+              db.query(
+                "SELECT * FROM users WHERE phone = ?",
+                [phone],
+                (err, userResult) => {
+                  if (err || userResult.length === 0) {
+                    return res
+                      .status(500)
+                      .json({ error: "Kullanıcı bulunamadı." });
+                  }
 
-                const user = userResult[0];
-                createSessionAndRespond(user.id, null, "registered", req, res);
-              }
-            );
+                  const user = userResult[0];
+                  createSessionAndRespond(
+                    user.id,
+                    null,
+                    "registered",
+                    req,
+                    res
+                  );
+                }
+              );
+            } else if (purpose === "registration") {
+              const fullName = `${name} ${surname}`;
+              db.query(
+                "INSERT INTO users (full_name, phone, email) VALUES (?, ?, ?)",
+                [fullName, phone, email || null],
+                (err, insertResult) => {
+                  if (err) {
+                    console.error("Kullanıcı ekleme hatası:", err);
+                    return res
+                      .status(500)
+                      .json({ error: "Kullanıcı kaydedilemedi." });
+                  }
+
+                  const userId = insertResult.insertId;
+                  createSessionAndRespond(userId, null, "registered", req, res);
+                }
+              );
+            } else {
+              res.json({
+                message: "Doğrulama kodu başarıyla doğrulandı.",
+                purpose: purpose,
+              });
+            }
           }
         );
       }
@@ -148,7 +168,6 @@ const verifyCode = async (req, res) => {
     res.status(500).json({ error: "Doğrulama işlemi sırasında hata oluştu." });
   }
 };
-
 const guestLogin = async (req, res) => {
   const { device_id, device_type, device_model } = req.body;
 
