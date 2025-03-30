@@ -52,6 +52,11 @@ SİPARİŞ İŞLEMLERİ ENDPOINT:
 /api/products/cart/ (GET İSTEĞİ getCart)
 /api/products/cart/:id (DELETE İSTEĞİ SEPETTEN ÜRÜN SİLME)
 
+urundetayları
+sepete ekle
+onay
+adres ekle
+çıkış yap
 
 
 

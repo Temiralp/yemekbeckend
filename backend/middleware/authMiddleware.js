@@ -1,39 +1,46 @@
 const jwt = require("jsonwebtoken");
+const config = require("../config/config");
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  console.log("Gelen Authorization Header:", authHeader);
-
+  
   if (!authHeader) {
-    return res.status(400).json({ error: "Authorization header eksik." });
+    return res.status(401).json({ error: "Authorization header eksik." });
   }
-
+  
   const token = authHeader.split(" ")[1];
-  console.log("Ayrıştırılan Token:", token); 
-
+  
   if (!token) {
-    return res.status(400).json({ error: "Token bulunamadı veya yanlış formatta." });
+    return res.status(401).json({ error: "Token bulunamadı." });
   }
-
-  jwt.verify(token, process.env.JWT_SECRET || "your_jwt_secret", (err, user) => {
+  
+  jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
     if (err) {
-      console.error("Token doğrulama hatası:", err.message);
-      return res.status(403).json({ error: "Geçersiz veya süresi dolmuş token." });
+      console.error("Token doğrulama hatası:", err);
+      
+      if (err.name === "TokenExpiredError") {
+        return res.status(403).json({ 
+          error: "Oturumun süresi doldu", 
+          code: "TOKEN_EXPIRED" 
+        });
+      }
+      
+      return res.status(403).json({ 
+        error: "Geçersiz token", 
+        code: "INVALID_TOKEN" 
+      });
     }
 
-    console.log("Doğrulanan Kullanıcı:", user);
-
-    if (!user.isStaff) {
-      return res.status(403).json({ error: "Bu işlem için yetkiniz yok. Yalnızca personel erişebilir." });
-    }
-
-    if (user.role !== "admin" && user.role !== "staff") {
-      return res.status(403).json({ error: "Bu işlem için yetkiniz yok." });
-    }
-
-    req.user = user;
+    // Kullanıcı bilgilerini req.user'a ekle
+    req.user = {
+      id: decoded.id,
+      type: decoded.type,
+      isGuest: decoded.type === "guest"
+    };
+    
+    console.log("Token doğrulandı, kullanıcı:", req.user);
     next();
   });
 };
 
-module.exports = authenticateAdmin;
+module.exports = authenticateToken;

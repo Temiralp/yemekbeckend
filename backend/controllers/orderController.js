@@ -1,246 +1,312 @@
 const db = require("../config/db");
 const moment = require("moment");
 
-// Utility function to handle database transactions with callbacks
-const withTransaction = (callback, onComplete) => {
-  db.getConnection((err, connection) => {
-    if (err) {
-      return onComplete(err);
-    }
-
-    connection.beginTransaction((err) => {
-      if (err) {
-        connection.release();
-        return onComplete(err);
-      }
-
-      callback(connection, (err, result) => {
-        if (err) {
-          connection.rollback(() => {
-            connection.release();
-            onComplete(err);
-          });
-          return;
-        }
-
-        connection.commit((err) => {
-          if (err) {
-            connection.rollback(() => {
-              connection.release();
-              onComplete(err);
-            });
-            return;
-          }
-
-          connection.release();
-          onComplete(null, result);
-        });
-      });
+// Transaction işlemleri için yardımcı fonksiyon
+// Promise-based veritabanı sorgusu fonksiyonu
+const query = (connection, sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    connection.query(sql, params, (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
     });
   });
 };
 
-// Create a new order
-const createOrder = (req, res) => {
-  const { address_id, payment_type, note, coupon_code } = req.body;
-  const user = req.user;
-
-  if (!address_id) {
-    return res.status(400).json({ error: "Teslimat adresi zorunludur." });
-  }
-
-  if (!payment_type || !["cash", "credit_card"].includes(payment_type)) {
-    return res.status(400).json({
-      error: "Geçersiz ödeme tipi. 'cash' veya 'credit_card' olmalı.",
-    });
-  }
-
-  const userId = user.isGuest ? null : user.id;
-  const guestId = user.isGuest ? user.id : null;
-  const userType = user.isGuest ? "guest" : "registered";
-
-  withTransaction((connection, cb) => {
-    const addressQuery = user.isGuest
-      ? "SELECT * FROM addresses WHERE id = ? AND guest_id = ?"
-      : "SELECT * FROM addresses WHERE id = ? AND user_id = ?";
-    const addressQueryId = user.isGuest ? guestId : userId;
-
-    connection.query(addressQuery, [address_id, addressQueryId], (err, addressResult) => {
-      if (err) {
-        return cb(err);
-      }
-
-      if (!addressResult.length) {
-        return cb(new Error("Adres bulunamadı veya size ait değil."));
-      }
-
-      const cartQuery = user.isGuest
-        ? "SELECT c.*, p.base_price, p.options AS product_options FROM cart c JOIN products p ON c.product_id = p.id WHERE c.guest_id = ? AND c.user_type = ?"
-        : "SELECT c.*, p.base_price, p.options AS product_options FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? AND c.user_type = ?";
-      const cartQueryId = user.isGuest ? guestId : userId;
-      const cartUserType = user.isGuest ? "guest" : "registered";
-
-      connection.query(cartQuery, [cartQueryId, cartUserType], (err, cartItems) => {
-        if (err) {
-          return cb(err);
-        }
-
-        if (!cartItems.length) {
-          return cb(new Error("Sepetiniz boş, sipariş oluşturamazsınız."));
-        }
-
-        let totalAmount = 0;
-        const orderItemsValues = cartItems.map((item) => {
-          let unitPrice = item.base_price;
-
-          if (item.options) {
-            const productOptions = JSON.parse(item.product_options || "[]");
-            const selectedOption = productOptions.find((opt) => opt.name === item.options);
-            unitPrice += selectedOption?.price_modifier || 0;
-          }
-
-          const itemPrice = unitPrice * item.quantity;
-          totalAmount += itemPrice;
-
-          return [item.product_id, item.quantity, unitPrice, item.options || null, item.note || null];
-        });
-
-        let appliedDiscount = 0;
-        let couponCode = null;
-
-        if (!coupon_code) {
-          return proceedWithOrder();
-        }
-
-        const couponQuery = `
-          SELECT * FROM coupons 
-          WHERE code = ? AND active = 1 AND start_date <= NOW() AND end_date >= NOW() AND min_order_amount <= ?
-        `;
-        connection.query(couponQuery, [coupon_code, totalAmount], (err, couponResult) => {
-          if (err) {
-            return cb(err);
-          }
-
-          if (!couponResult.length) {
-            return cb(new Error("Geçersiz veya süresi dolmuş kupon kodu."));
-          }
-
-          const coupon = couponResult[0];
-
-          if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-            return cb(new Error("Bu kupon kullanım limitine ulaştı."));
-          }
-
-          appliedDiscount =
-            coupon.discount_type === "percent"
-              ? (totalAmount * coupon.discount_amount) / 100
-              : coupon.discount_type === "fixed"
-              ? coupon.discount_amount
-              : 0;
-
-          totalAmount = Math.max(totalAmount - appliedDiscount, 0);
-          couponCode = coupon_code;
-
-          connection.query(
-            "UPDATE coupons SET usage_count = usage_count + 1, updated_at = ? WHERE id = ?",
-            [moment().toDate(), coupon.id],
-            (err) => {
-              if (err) {
-                return cb(err);
-              }
-              proceedWithOrder();
-            }
-          );
-        });
-
-        function proceedWithOrder() {
-          const orderQuery = `
-            INSERT INTO orders (user_id, user_type, address_id, order_time, total_amount, payment_type, order_status, note, coupon_code, guest_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-          const orderValues = [
-            userId,
-            userType,
-            address_id,
-            moment().toDate(),
-            totalAmount,
-            payment_type,
-            "pending",
-            note || null,
-            couponCode,
-            guestId,
-          ];
-
-          connection.query(orderQuery, orderValues, (err, orderResult) => {
-            if (err) {
-              return cb(err);
-            }
-
-            const orderId = orderResult.insertId;
-
-            const orderItemsQuery = `
-              INSERT INTO order_items (order_id, product_id, quantity, unit_price, options, note)
-              VALUES ?
-            `;
-            const orderItemsData = orderItemsValues.map((item) => [orderId, ...item]);
-
-            connection.query(orderItemsQuery, [orderItemsData], (err) => {
-              if (err) {
-                return cb(err);
-              }
-
-              connection.query(
-                "INSERT INTO order_status_history (order_id, old_status, new_status, changed_at, staff_id, note) VALUES (?, ?, ?, ?, ?, ?)",
-                [orderId, null, "pending", moment().toDate(), null, "Sipariş oluşturuldu"],
-                (err) => {
-                  if (err) {
-                    return cb(err);
-                  }
-
-                  const clearCartQuery = user.isGuest
-                    ? "DELETE FROM cart WHERE guest_id = ? AND user_type = ?"
-                    : "DELETE FROM cart WHERE user_id = ? AND user_type = ?";
-
-                  connection.query(clearCartQuery, [cartQueryId, cartUserType], (err) => {
-                    if (err) {
-                      return cb(err);
-                    }
-
-                    cb(null, {
-                      order_id: orderId,
-                      total_amount: totalAmount,
-                      applied_discount: appliedDiscount,
-                    });
-                  });
-                }
-              );
-            });
-          });
-        }
+// Promise-based transaction yönetimi
+const withTransaction = async (callback, timeoutMs = 15000) => {
+  let connection;
+  
+  // Timeout promise'i
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Transaction timeout - işlem zaman aşımına uğradı')), timeoutMs);
+  });
+  
+  try {
+    // Bağlantı al
+    connection = await new Promise((resolve, reject) => {
+      db.getConnection((err, conn) => {
+        if (err) reject(err);
+        else resolve(conn);
       });
     });
-  }, (err, result) => {
-    if (err) {
-      console.error("Sipariş oluşturma hatası:", err.message, err.stack);
-      return res
-        .status(err.message.includes("bulunamadı") ? 404 : 500)
-        .json({ error: err.message });
+    
+    // Transaction başlat
+    await new Promise((resolve, reject) => {
+      connection.beginTransaction(err => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    
+    // Callback'i çağır ve timeout ile race
+    const result = await Promise.race([
+      callback(connection, query),
+      timeoutPromise
+    ]);
+    
+    // Transaction'ı commit et
+    await new Promise((resolve, reject) => {
+      connection.commit(err => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    
+    return result;
+  } catch (error) {
+    // Hata durumunda rollback yap
+    if (connection) {
+      await new Promise(resolve => {
+        connection.rollback(() => resolve());
+      });
+    }
+    throw error;
+  } finally {
+    // Her durumda bağlantıyı serbest bırak
+    if (connection) connection.release();
+  }
+};
+
+// createOrder fonksiyonunu bu yeni withTransaction kullanımına göre düzenleme
+const createOrder = async (req, res) => {
+  try {
+    const { address_id, payment_type, note, coupon_code } = req.body;
+    const user = req.user;
+    console.log("CreateOrder FULL Request Body:", req.body);
+    console.log("CreateOrder User:", req.user);
+    console.log("Sipariş oluşturma isteği:", { body: req.body, user });
+
+    // Kullanıcı ve yetkilendirme kontrolü
+    if (!user) {
+      return res.status(401).json({ error: "Yetkisiz erişim." });
     }
 
+    // Zorunlu alan kontrolleri
+    if (!address_id) {
+      return res.status(400).json({ error: "Teslimat adresi zorunludur." });
+    }
+
+    if (!payment_type || !["cash", "credit_card"].includes(payment_type)) {
+      return res.status(400).json({
+        error: "Geçersiz ödeme tipi. 'cash' veya 'credit_card' olmalı.",
+      });
+    }
+
+    // Kullanıcı bilgilerini belirle
+    const userId = user.isGuest ? null : user.id;
+    const guestId = user.isGuest ? user.id : null;
+    const userType = user.isGuest ? "guest" : "registered";
+    
+    console.log("Sipariş parametreleri:", { 
+      userId, 
+      guestId, 
+      userType, 
+      address_id, 
+      payment_type 
+    });
+
+    const result = await withTransaction(async (connection, query) => {
+      // 1. Adres kontrolü
+      const addressQuery = userType === "guest"
+        ? "SELECT * FROM addresses WHERE id = ? AND guest_id = ?"
+        : "SELECT * FROM addresses WHERE id = ? AND user_id = ?";
+      const addressQueryId = userType === "guest" ? guestId : userId;
+
+      const addressResult = await query(connection, addressQuery, [address_id, addressQueryId]);
+      
+      if (addressResult.length === 0) {
+        throw new Error("Adres bulunamadı veya size ait değil.");
+      }
+      
+      console.log("Adres doğrulandı:", addressResult[0]);
+
+      // 2. Sepet ürünlerini getir
+      const cartQuery = userType === "guest"
+        ? "SELECT c.*, p.base_price, p.options AS product_options FROM cart c JOIN products p ON c.product_id = p.id WHERE c.guest_id = ? AND c.user_type = ?"
+        : "SELECT c.*, p.base_price, p.options AS product_options FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = ? AND c.user_type = ?";
+      
+      const cartItems = await query(connection, cartQuery, [userType === "guest" ? guestId : userId, userType]);
+      
+      if (cartItems.length === 0) {
+        throw new Error("Sepetiniz boş, sipariş oluşturamazsınız.");
+      }
+      
+      console.log(`Sepette ${cartItems.length} ürün bulundu.`);
+
+      // 3. Toplam tutarı hesapla
+      let totalAmount = 0;
+      const orderItemsData = cartItems.map((item) => {
+        let unitPrice = parseFloat(item.base_price);
+        
+        // Ürün seçeneği varsa fiyatı güncelle
+        if (item.options) {
+          try {
+            const productOptions = item.product_options 
+              ? (typeof item.product_options === 'string' 
+                  ? JSON.parse(item.product_options) 
+                  : item.product_options)
+              : [];
+              
+            const selectedOption = productOptions.find(opt => opt.name === item.options);
+            if (selectedOption && selectedOption.priceModifier) {
+              unitPrice += parseFloat(selectedOption.priceModifier);
+            }
+          } catch (e) {
+            console.error("Ürün seçenekleri çözümleme hatası:", e);
+          }
+        }
+
+        const itemPrice = unitPrice * item.quantity;
+        totalAmount += itemPrice;
+
+        return [null, item.product_id, item.quantity, unitPrice, item.options, item.note];
+      });
+      
+      console.log("Toplam sipariş tutarı:", totalAmount);
+
+      // 4. Kupon kontrolü
+      let discountAmount = 0;
+      let appliedCouponCode = null;
+      
+      if (coupon_code) {
+        const couponQuery = `
+          SELECT * FROM coupons 
+          WHERE code = ? AND active = 1 AND start_date <= NOW() AND end_date >= NOW()
+        `;
+
+        const couponResult = await query(connection, couponQuery, [coupon_code]);
+        
+        if (couponResult.length === 0) {
+          throw new Error("Geçersiz kupon kodu.");
+        }
+
+        const coupon = couponResult[0];
+
+        if (coupon.min_order_amount > totalAmount) {
+          throw new Error(`Bu kupon için minimum sipariş tutarı ${coupon.min_order_amount} TL'dir.`);
+        }
+
+        if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+          throw new Error("Kupon kullanım limiti doldu.");
+        }
+
+        if (coupon.discount_type === 'percentage') {
+          discountAmount = (totalAmount * coupon.discount_amount) / 100;
+        } else if (coupon.discount_type === 'fixed') {
+          discountAmount = coupon.discount_amount;
+        }
+
+        totalAmount = Math.max(totalAmount - discountAmount, 0);
+
+        // Kupon kullanım sayısını güncelle
+        await query(
+          connection,
+          "UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?", 
+          [coupon.id]
+        );
+        
+        appliedCouponCode = coupon.code;
+      }
+
+      // 5. Sipariş oluşturma
+      const orderQuery = `
+        INSERT INTO orders (
+          user_id, user_type, address_id, order_time, total_amount, 
+          payment_type, order_status, note, coupon_code, guest_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const orderValues = [
+        userId,
+        userType,
+        address_id,
+        moment().toDate(),
+        totalAmount,
+        payment_type,
+        "pending",
+        note || null,
+        appliedCouponCode,
+        guestId
+      ];
+
+      const orderResult = await query(connection, orderQuery, orderValues);
+      const orderId = orderResult.insertId;
+
+      // 6. Sipariş öğelerini ekle
+      const orderItemsQuery = `
+        INSERT INTO order_items (
+          order_id, product_id, quantity, unit_price, options, note
+        ) VALUES ?
+      `;
+
+      const finalOrderItemsData = orderItemsData.map(item => [orderId, ...item.slice(1)]);
+      await query(connection, orderItemsQuery, [finalOrderItemsData]);
+
+      // 7. Sipariş durum geçmişi oluştur
+      const statusHistoryQuery = `
+        INSERT INTO order_status_history 
+        (order_id, old_status, new_status, changed_at, note) 
+        VALUES (?, ?, ?, ?, ?)
+      `;
+
+      await query(
+        connection,
+        statusHistoryQuery, 
+        [orderId, null, "pending", moment().toDate(), "Sipariş oluşturuldu"]
+      );
+
+      // 8. Sepeti temizle
+      const clearCartQuery = userType === "guest"
+        ? "DELETE FROM cart WHERE guest_id = ? AND user_type = ?"
+        : "DELETE FROM cart WHERE user_id = ? AND user_type = ?";
+
+      await query(
+        connection,
+        clearCartQuery, 
+        [userType === "guest" ? guestId : userId, userType]
+      );
+
+      // İşlem sonucunu döndür
+      return {
+        order_id: orderId,
+        total_amount: totalAmount,
+        applied_discount: discountAmount || 0,
+        coupon_code: appliedCouponCode
+      };
+    });
+
+    // Transaction başarıyla tamamlandı
     res.status(201).json({
       status: "success",
       message: "Sipariş başarıyla oluşturuldu.",
-      ...result,
+      ...result
     });
-  });
+  } catch (err) {
+    // Genel hata yakalama
+    console.error("FULL ERROR DETAILS:", err);
+    return res.status(500).json({ 
+      status: "error",
+      fullErrorMessage: err.message,
+      errorStack: err.stack
+    });
+  }
 };
 
-// Get orders for the authenticated user
+// Kullanıcının siparişlerini getir
 const getOrders = (req, res) => {
   const user = req.user;
+  
+  console.log("getOrders çağrıldı, user:", user);
+  
+  if (!user) {
+    return res.status(401).json({ error: "Yetkisiz erişim." });
+  }
+  
   const userId = user.isGuest ? null : user.id;
   const guestId = user.isGuest ? user.id : null;
   const userType = user.isGuest ? "guest" : "registered";
+  
+  console.log("Siparişler getiriliyor:", { userId, guestId, userType });
 
   const ordersQuery = `
     SELECT 
@@ -276,8 +342,10 @@ const getOrders = (req, res) => {
   db.query(ordersQuery, [userId, userType, guestId, userType], (err, orders) => {
     if (err) {
       console.error("Sipariş sorgulama hatası:", err.message, err.stack);
-      return res.status(500).json({ error: "Siparişler bulunamadı." });
+      return res.status(500).json({ error: "Siparişler bulunamadı: " + err.message });
     }
+    
+    console.log(`${orders.length} sipariş bulundu.`);
 
     if (!orders.length) {
       return res.status(200).json({ status: "success", data: [] });
@@ -285,24 +353,27 @@ const getOrders = (req, res) => {
 
     const orderIds = orders.map((order) => order.id);
 
+    // Sipariş öğelerini getir
     db.query(
       "SELECT oi.* FROM order_items oi WHERE oi.order_id IN (?)",
       [orderIds],
       (err, orderItems) => {
         if (err) {
           console.error("Sipariş öğeleri sorgulama hatası:", err.message, err.stack);
-          return res.status(500).json({ error: "Siparişler bulunamadı." });
+          return res.status(500).json({ error: "Siparişler bulunamadı: " + err.message });
         }
 
+        // Sipariş durumu geçmişini getir
         db.query(
           "SELECT osh.* FROM order_status_history osh WHERE osh.order_id IN (?)",
           [orderIds],
           (err, statusHistory) => {
             if (err) {
               console.error("Durum geçmişi sorgulama hatası:", err.message, err.stack);
-              return res.status(500).json({ error: "Siparişler bulunamadı." });
+              return res.status(500).json({ error: "Siparişler bulunamadı: " + err.message });
             }
 
+            // Her sipariş için öğeleri ve durum geçmişini birleştir
             const parsedResults = orders.map((order) => ({
               ...order,
               order_items: orderItems.filter((item) => item.order_id === order.id),
@@ -320,8 +391,16 @@ const getOrders = (req, res) => {
   });
 };
 
-// Get all orders (admin only)
+// Tüm siparişleri getir (admin)
 const getAllOrders = (req, res) => {
+  const user = req.user;
+  
+  console.log("getAllOrders çağrıldı, user:", user);
+  
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ error: "Bu işlem için yetkiniz yok." });
+  }
+  
   const ordersQuery = `
     SELECT 
       o.*,
@@ -401,10 +480,17 @@ const getAllOrders = (req, res) => {
   });
 };
 
+// Sipariş durumunu güncelle
 const updateOrderStatus = (req, res) => {
   const { order_id } = req.params;
   const { order_status, staff_id, note } = req.body;
-  const updated_by = req.user.id;
+  const user = req.user;
+  
+  console.log("updateOrderStatus çağrıldı:", { order_id, order_status, staff_id, user });
+  
+  if (!user || !['admin', 'staff'].includes(user.role)) {
+    return res.status(403).json({ error: "Bu işlem için yetkiniz yok." });
+  }
 
   if (!order_id || !order_status) {
     return res.status(400).json({ error: "Sipariş ID'si ve yeni durum zorunludur." });
@@ -424,36 +510,36 @@ const updateOrderStatus = (req, res) => {
           return cb(err);
         }
 
-        if (!orderResult.length) {
+        if (orderResult.length === 0) {
           return cb(new Error("Sipariş bulunamadı."));
         }
 
         const oldStatus = orderResult[0].order_status;
 
-        if (!staff_id) {
-          return proceedWithUpdate();
+        if (staff_id) {
+          connection.query(
+            "SELECT * FROM staff WHERE id = ? AND status = 'active'",
+            [staff_id],
+            (err, staffResult) => {
+              if (err) {
+                return cb(err);
+              }
+
+              if (staffResult.length === 0) {
+                return cb(new Error("Geçersiz veya aktif olmayan personel ID'si."));
+              }
+
+              proceedWithUpdate();
+            }
+          );
+        } else {
+          proceedWithUpdate();
         }
-
-        connection.query(
-          "SELECT * FROM staff WHERE id = ? AND status = 'active'",
-          [staff_id],
-          (err, staffResult) => {
-            if (err) {
-              return cb(err);
-            }
-
-            if (!staffResult.length) {
-              return cb(new Error("Geçersiz veya aktif olmayan personel ID'si."));
-            }
-
-            proceedWithUpdate();
-          }
-        );
 
         function proceedWithUpdate() {
           connection.query(
             "UPDATE orders SET order_status = ?, staff_id = ?, updated_by = ?, updated_at = ? WHERE id = ?",
-            [order_status, staff_id || null, updated_by, moment().toDate(), order_id],
+            [order_status, staff_id || null, user.id, moment().toDate(), order_id],
             (err) => {
               if (err) {
                 return cb(err);
@@ -466,7 +552,7 @@ const updateOrderStatus = (req, res) => {
                   oldStatus,
                   order_status,
                   moment().toDate(),
-                  staff_id || null,
+                  staff_id || user.id,
                   note || "Sipariş durumu güncellendi",
                 ],
                 (err) => {
@@ -497,10 +583,17 @@ const updateOrderStatus = (req, res) => {
   });
 };
 
-// Cancel an order (user action)
+// Siparişi iptal et
 const cancelOrder = (req, res) => {
   const { order_id } = req.params;
   const user = req.user;
+  
+  console.log("cancelOrder çağrıldı:", { order_id, user });
+  
+  if (!user) {
+    return res.status(401).json({ error: "Yetkisiz erişim." });
+  }
+  
   const userId = user.isGuest ? null : user.id;
   const guestId = user.isGuest ? user.id : null;
   const userType = user.isGuest ? "guest" : "registered";
@@ -510,14 +603,14 @@ const cancelOrder = (req, res) => {
       `
       SELECT * FROM orders 
       WHERE id = ? AND ((user_id = ? AND user_type = ?) OR (guest_id = ? AND user_type = ?))
-    `,
+      `,
       [order_id, userId, userType, guestId, userType],
       (err, results) => {
         if (err) {
           return cb(err);
         }
 
-        if (!results.length) {
+        if (results.length === 0) {
           return cb(new Error("Sipariş bulunamadı veya size ait değil."));
         }
 
@@ -576,10 +669,11 @@ const cancelOrder = (req, res) => {
   });
 };
 
+// Modül export
 module.exports = {
   createOrder,
   getOrders,
   getAllOrders,
   updateOrderStatus,
-  cancelOrder,
+  cancelOrder
 };
