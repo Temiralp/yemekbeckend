@@ -631,6 +631,85 @@ const deleteProduct = (req, res) => {
     }
   );
 };
+
+
+
+
+const updateCartItem = (req, res) => {
+  const { id } = req.params;
+  const { quantity } = req.body;
+  const user = req.user;
+
+  // Miktar kontrolü
+  if (!quantity || quantity <= 0) {
+    return res.status(400).json({ 
+      error: "Geçersiz miktar",
+      details: "Miktar 0'dan büyük olmalıdır"
+    });
+  }
+
+  try {
+    // Kullanıcı bilgilerini belirle
+    const userId = user.isGuest ? null : user.id;
+    const guestId = user.isGuest ? user.id : null;
+    const userType = user.isGuest ? "guest" : "registered";
+
+    // Önce sepet öğesinin varlığını ve kullanıcıya ait olup olmadığını kontrol et
+    const checkQuery = userType === "guest"
+      ? "SELECT * FROM cart WHERE id = ? AND guest_id = ?"
+      : "SELECT * FROM cart WHERE id = ? AND user_id = ?";
+
+    db.query(checkQuery, [id, userType === "guest" ? guestId : userId], (checkErr, checkResult) => {
+      if (checkErr) {
+        console.error('Sepet öğesi kontrol hatası:', checkErr);
+        return res.status(500).json({ 
+          error: "Sepet kontrolünde hata oluştu", 
+          details: checkErr.message 
+        });
+      }
+
+      // Sepet öğesi bulunamadıysa
+      if (checkResult.length === 0) {
+        return res.status(404).json({ 
+          error: "Sepet öğesi bulunamadı",
+          details: "Belirtilen sepet öğesi size ait değil" 
+        });
+      }
+
+      // Güncelleme sorgusu
+      const updateQuery = userType === "guest"
+        ? "UPDATE cart SET quantity = ? WHERE id = ? AND guest_id = ?"
+        : "UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?";
+
+      db.query(updateQuery, [quantity, id, userType === "guest" ? guestId : userId], (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error('Sepet güncelleme hatası:', updateErr);
+          return res.status(500).json({ 
+            error: "Sepet güncellenemedi", 
+            details: updateErr.message 
+          });
+        }
+
+        // Başarılı güncelleme
+        res.status(200).json({
+          message: "Sepet miktarı başarıyla güncellendi",
+          updatedQuantity: quantity
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Kritik sepet güncelleme hatası:', error);
+    res.status(500).json({ 
+      error: "Sunucu hatası", 
+      details: error.message 
+    });
+  }
+};
+
+
+
+
+
 const addToCart = (req, res) => {
   const { product_id, quantity, option, note } = req.body;
   const user = req.user;
@@ -868,4 +947,5 @@ module.exports = {
   addToCart,
   getCart,
   removeFromCart,
+  updateCartItem, // bunu ekleyin
 };

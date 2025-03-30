@@ -34,5 +34,5 @@ router.get("/", productController.getAllProducts);
 
 // Bu rota en sonda olmalı, çünkü /:id deseni diğer tüm rotaları yakalayabilir
 router.get("/:id", optionalAuth, productController.getProductById);
-
+router.put("/cart/:id", authenticateToken, productController.updateCartItem);
 module.exports = router;
