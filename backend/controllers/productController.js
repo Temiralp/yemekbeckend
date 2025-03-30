@@ -711,108 +711,111 @@ const updateCartItem = (req, res) => {
 
 
 const addToCart = (req, res) => {
-  const { product_id, quantity, option, note } = req.body;
+  console.log("Sepete Ekleme - DETAYLI İstek Bilgileri:", {
+      body: JSON.stringify(req.body),
+      user: JSON.stringify(req.user)
+  });
+
   const user = req.user;
-
-  // Gelen verilerin eksiksiz ve doğru olup olmadığını kontrol et
-  if (!product_id || !quantity) {
-    return res.status(400).json({ 
-      error: "Ürün ID'si ve miktar zorunludur.",
-      details: "product_id ve quantity alanları boş bırakılamaz"
-    });
+  if (!user) {
+      return res.status(401).json({ error: "Yetkisiz erişim" });
   }
 
-  // Miktar kontrolü
-  if (quantity <= 0) {
-    return res.status(400).json({ 
-      error: "Miktar 0'dan büyük olmalıdır.",
-      details: "Sepete eklenecek ürün miktarı 1 veya daha fazla olmalı"
-    });
+  const { product_id, quantity, option, note } = req.body;
+
+  // Zorunlu alan kontrolleri
+  if (!product_id) {
+      return res.status(400).json({ error: "Ürün ID'si zorunludur" });
   }
 
-  try {
-    // Ürün var mı ve aktif mi kontrol et
-    db.query(
-      `SELECT p.*, c.name AS category_name 
-       FROM products p 
-       JOIN categories c ON p.category_id = c.id 
-       WHERE p.id = ? AND p.is_active = TRUE`,
-      [product_id],
-      (err, productResult) => {
-        if (err) {
-          console.error('Ürün sorgulama hatası:', err);
-          return res.status(500).json({ 
-            error: "Veritabanı hatası", 
-            details: err.message 
-          });
-        }
+  if (!quantity || quantity <= 0) {
+      return res.status(400).json({ error: "Geçerli bir miktar belirtin" });
+  }
 
-        if (productResult.length === 0) {
-          return res.status(404).json({ 
-            error: "Ürün bulunamadı veya aktif değil",
-            details: `ID: ${product_id} olan ürün bulunamadı`
-          });
-        }
+  // Kullanıcı tipine göre ID belirleme
+  const user_id = user.type === "registered" ? user.id : null;
+  const guest_id = user.type === "guest" ? user.id : null;
+  const user_type = user.type;
 
-        const product = productResult[0];
-        const userId = user.isGuest ? null : user.id;
-        const guestId = user.isGuest ? user.id : null;
-        const userType = user.isGuest ? "guest" : "registered";
+  console.log("Sepete Ekleme - Kullanıcı Detayları:", {
+      user_id,
+      guest_id,
+      user_type
+  });
 
-        // Ürün seçeneklerini kontrol et
-        const productOptions = product.options ? JSON.parse(product.options) : [];
-        
-        // Option kontrolünü daha esnek yap
-        const optionValue = option ? String(option).substring(0, 255) : null;
+  // Ürün kontrolü ve sepete ekleme
+  const checkProductQuery = 'SELECT * FROM products WHERE id = ? AND is_active = TRUE';
+  
+  db.query(checkProductQuery, [product_id], (checkErr, productResults) => {
+      if (checkErr) {
+          console.error("Ürün kontrol hatası:", checkErr);
+          return res.status(500).json({ error: "Ürün kontrolünde hata oluştu" });
+      }
 
-        // Sepete ekleme sorgusu
-        const insertQuery = `
+      if (productResults.length === 0) {
+          return res.status(404).json({ error: "Ürün bulunamadı" });
+      }
+
+      // Sepete ekleme sorgusu
+      const insertQuery = `
           INSERT INTO cart (
-            user_id, 
-            user_type, 
-            product_id, 
-            quantity, 
-            options, 
-            note, 
-            added_at, 
-            guest_id
+              user_id, 
+              user_type, 
+              product_id, 
+              quantity, 
+              options, 
+              note, 
+              added_at,
+              guest_id
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+      `;
 
-        const values = [
-          userId,
-          userType,
+      const values = [
+          user_id,
+          user_type,
           product_id,
           quantity,
-          optionValue,
+          option || null,
           note || null,
-          moment().toDate(),
-          guestId
-        ];
+          new Date(),
+          guest_id
+      ];
 
-        db.query(insertQuery, values, (err, cartResult) => {
-          if (err) {
-            console.error('Sepete ekleme hatası:', err);
-            return res.status(500).json({ 
-              error: "Sepete ekleme başarısız", 
-              details: err.message 
-            });
+      console.log("Sepete Ekleme - SQL Sorgu Detayları:", {
+          query: insertQuery,
+          values: values
+      });
+
+      db.query(insertQuery, values, (insertErr, result) => {
+          if (insertErr) {
+              console.error("Sepete ekleme DETAYLI hatası:", insertErr);
+              return res.status(500).json({ 
+                  error: "Sepete ürün eklenirken hata oluştu",
+                  details: {
+                      message: insertErr.message,
+                      code: insertErr.code,
+                      sqlState: insertErr.sqlState
+                  }
+              });
           }
 
-          res.status(201).json({
-            message: "Ürün sepete eklendi!",
-            cart_id: cartResult.insertId
+          console.log("Sepete Ekleme - TAM Sonuç:", {
+              insertId: result.insertId,
+              affectedRows: result.affectedRows,
+              changedRows: result.changedRows,
+              warningCount: result.warningCount,
+              message: result.message
           });
-        });
-      }
-    );
-  } catch (error) {
-    console.error('Kritik sepet hatası:', error);
-    res.status(500).json({ 
-      error: "Sunucu hatası", 
-      details: error.message 
-    });
-  }
+
+          res.status(201).json({
+              message: "Ürün sepete eklendi",
+              cart_id: result.insertId,
+              details: {
+                  affectedRows: result.affectedRows
+              }
+          });
+      });
+  });
 };
 const getCart = (req, res) => {
   const user = req.user;

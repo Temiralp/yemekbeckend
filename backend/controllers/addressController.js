@@ -1,5 +1,75 @@
 const db = require("../config/db");
 
+// Tüm aktif bölgeleri getiren metot
+exports.getAllRegions = (req, res) => {
+  try {
+    // Bölgeleri ve ilçeleri getirecek sorgu
+    const query = `
+      SELECT 
+          r.id AS region_id, 
+          r.name AS region_name, 
+          d.id AS district_id, 
+          d.name AS district_name,
+          n.id AS neighborhood_id,
+          n.name AS neighborhood_name,
+          s.id AS street_id,
+          s.name AS street_name
+      FROM 
+          regions r
+      LEFT JOIN 
+          districts d ON d.region_id = r.id
+      LEFT JOIN 
+          neighborhoods n ON n.district_id = d.id
+      LEFT JOIN 
+          streets s ON s.neighborhood_id = n.id
+      WHERE 
+          r.is_active = TRUE 
+          AND d.is_active = TRUE 
+          AND n.is_active = TRUE
+      ORDER BY 
+          r.name, d.name, n.name, s.name
+    `;
+
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error("Bölge bilgileri getirme hatası:", err);
+        return res.status(500).json({ 
+          error: "Bölge bilgileri alınamadı",
+          details: err.message 
+        });
+      }
+
+      // Sonuçları yapılandır
+      const regions = {};
+      results.forEach(row => {
+        if (!regions[row.region_name]) {
+          regions[row.region_name] = {};
+        }
+        if (!regions[row.region_name][row.district_name]) {
+          regions[row.region_name][row.district_name] = {};
+        }
+        if (!regions[row.region_name][row.district_name][row.neighborhood_name]) {
+          regions[row.region_name][row.district_name][row.neighborhood_name] = [];
+        }
+        if (row.street_name) {
+          regions[row.region_name][row.district_name][row.neighborhood_name].push(row.street_name);
+        }
+      });
+
+      res.status(200).json({
+        status: "success",
+        data: regions
+      });
+    });
+  } catch (error) {
+    console.error("Bölge bilgileri getirme hatası:", error);
+    res.status(500).json({ 
+      error: "Bölge bilgileri alınamadı",
+      details: error.message 
+    });
+  }
+};
+
 exports.addAddress = async (req, res) => {
   console.log("addAddress çağrıldı, req.body:", req.body);
   console.log("addAddress çağrıldı, req.user:", req.user);
@@ -89,13 +159,11 @@ exports.getAddresses = async (req, res) => {
   console.log("getAddresses çağrıldı, req.query:", req.query);
   console.log("getAddresses çağrıldı, req.user:", req.user);
   
-  // Kullanıcı JWT'den gelen bilgiler
   const user = req.user;
   if (!user) {
     return res.status(401).json({ error: "Yetkisiz erişim." });
   }
   
-  // Kullanıcı tipine göre ID belirleme
   const user_id = user.type === "registered" ? user.id : null;
   const guest_id = user.type === "guest" ? user.id : null;
   const user_type = user.type;
@@ -103,7 +171,6 @@ exports.getAddresses = async (req, res) => {
   console.log("Adresler sorgulanıyor:", { user_id, guest_id, user_type });
 
   try {
-    // Kullanıcı tipine göre sorgu
     const query = user_type === "registered"
       ? "SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC, id DESC"
       : "SELECT * FROM addresses WHERE guest_id = ? ORDER BY is_default DESC, id DESC";
@@ -133,26 +200,22 @@ exports.updateAddress = async (req, res) => {
   console.log("updateAddress çağrıldı, id:", id);
   console.log("updateAddress çağrıldı, req.body:", req.body);
   
-  // Kullanıcı JWT'den gelen bilgiler
   const user = req.user;
   if (!user) {
     return res.status(401).json({ error: "Yetkisiz erişim." });
   }
   
-  // Body'den gelen adres bilgileri
   const { title, city, district, neighborhood, street, address_detail, is_default } = req.body;
   
   if (!id) {
     return res.status(400).json({ error: "Adres ID'si zorunludur." });
   }
   
-  // Kullanıcı tipine göre ID belirleme
   const user_id = user.type === "registered" ? user.id : null;
   const guest_id = user.type === "guest" ? user.id : null;
   const user_type = user.type;
 
   try {
-    // Eğer güncellenen adres varsayılan ise, diğer adreslerin varsayılan durumunu kaldır
     if (is_default) {
       const updateQuery = user_type === "registered"
         ? "UPDATE addresses SET is_default = 0 WHERE user_id = ?"
@@ -171,7 +234,6 @@ exports.updateAddress = async (req, res) => {
       });
     }
 
-    // Adresi güncelle
     const query = user_type === "registered"
       ? "UPDATE addresses SET title = ?, city = ?, district = ?, neighborhood = ?, street = ?, address_detail = ?, is_default = ? WHERE id = ? AND user_id = ?"
       : "UPDATE addresses SET title = ?, city = ?, district = ?, neighborhood = ?, street = ?, address_detail = ?, is_default = ? WHERE id = ? AND guest_id = ?";
@@ -210,7 +272,6 @@ exports.deleteAddress = async (req, res) => {
   const { id } = req.params;
   console.log("deleteAddress çağrıldı, id:", id);
   
-  // Kullanıcı JWT'den gelen bilgiler
   const user = req.user;
   if (!user) {
     return res.status(401).json({ error: "Yetkisiz erişim." });
@@ -220,13 +281,11 @@ exports.deleteAddress = async (req, res) => {
     return res.status(400).json({ error: "Adres ID'si zorunludur." });
   }
   
-  // Kullanıcı tipine göre ID belirleme
   const user_id = user.type === "registered" ? user.id : null;
   const guest_id = user.type === "guest" ? user.id : null;
   const user_type = user.type;
 
   try {
-    // Adresi sil
     const query = user_type === "registered"
       ? "DELETE FROM addresses WHERE id = ? AND user_id = ?"
       : "DELETE FROM addresses WHERE id = ? AND guest_id = ?";
@@ -249,4 +308,13 @@ exports.deleteAddress = async (req, res) => {
     console.error("Adres silme genel hatası:", err);
     res.status(500).json({ error: "Adres silme işlemi sırasında hata oluştu." });
   }
+};
+
+// Tüm fonksiyonları export et
+module.exports = {
+  getAllRegions: exports.getAllRegions,
+  addAddress: exports.addAddress,
+  getAddresses: exports.getAddresses,
+  updateAddress: exports.updateAddress,
+  deleteAddress: exports.deleteAddress
 };

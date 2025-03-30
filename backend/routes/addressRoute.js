@@ -7,5 +7,5 @@ router.post("/", authenticateToken, addressController.addAddress);
 router.get("/", authenticateToken, addressController.getAddresses);
 router.put("/:id", authenticateToken, addressController.updateAddress);
 router.delete("/:id", authenticateToken, addressController.deleteAddress);
-
+router.get("/regions", authenticateToken, addressController.getAllRegions);
 module.exports = router;
