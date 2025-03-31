@@ -1,0 +1,68 @@
+ENDPOINT
+
+Kullanıcı giriş yapma ve kayıt olma:
+/auth/register (POST İSTEĞİ)
+/auth/login (POST İSTEĞİ)
+/auth/guest-login (POST İSTEĞİ)
+
+Kullanıcı çıkış yapma ve profil:
+/auth/logout (POST İSTEĞİ)
+/auth/profile (GET İSTEĞİ)
+
+Doğrulama kodu gönderme:
+/auth/verify-code (POST İSTEĞİ)
+
+
+Kullanıcı adres endpointleri:
+/addresses (POST İSTEĞİ adres ekleme)
+/addresses (GET İSTEĞİ)
+/addresses/:id (PUT İSTEĞİ adres güncelleme)
+/addresses/:id (DELETE İSTEĞİ adres silme)
+
+KATEGORİLER ENDPOINT:
+/api/categories (GET İSTEĞİ kategorileri listeleme)
+/api/categories/:id (GET İSTEĞİ kategorileri id sine göre listeleme)
+/api/categories (POST İSTEĞİ yeni kategori oluşturma)
+/api/categories/:id (PUT İSTEĞİ kategori güncelleme)
+/api/categories/:id (DELETE İSTEĞİ kategori silme)
+
+
+KUPON İŞLEMLERİ ENDPOINT:
+/api/coupon/ (GET İSTEĞİ getAllCoupons)
+/api/coupon/:id (GET İSTEĞİ getCouponById)
+/api/coupon/ (POST İSTEĞİ createCoupon)
+/api/coupon/:id (PUT İSTEĞİ updateCoupon)
+/api/coupon/:id (DELETE İSTEĞİ deleteCoupon)
+
+SİPARİŞ İŞLEMLERİ ENDPOINT:
+/api/orders/ (POST İSTEĞİ sipariş oluşturma createOrder)
+/api/orders/ (GET İSTEĞİ getOrders (KULLANICI İÇİN))
+/api/orders/:order_id/cancel/ (PUT İSTEĞİ (KULLANICI İÇİN) siparişi iptal etme cancelOrder)
+/api/orders/all (GET İSTEĞİ getAllOrders (ADMİN İÇİN))
+/api/orders/:order_id/status/ (PUT İSTEĞİ (ADMİN İÇİN) updateOrderStatus)
+
+
+ÜRÜN ve SEPET İŞLEMLERİ ENDPOINT:
+/api/products/ (GET İSTEĞİ getAllProducts)
+/api/products/:id (GET İSTEĞİ getProductById)
+/api/products/ (POST İSTEĞİ createProduct)
+/api/products/:id (PUT İSTEĞİ updateProduct)
+/api/products/:id (DELETE İSTEĞİ deleteProduct)
+/api/products/add-to-cart (POST İSTEĞİ SEPETE EKLEMEK İÇİN)
+/api/products/cart/ (GET İSTEĞİ getCart)
+/api/products/cart/:id (DELETE İSTEĞİ SEPETTEN ÜRÜN SİLME)
+
+urundetayları
+sepete ekle
+onay
+adres ekle
+çıkış yap
+
+
+
+
+
+
+
+
+
