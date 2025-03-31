@@ -4,6 +4,7 @@ const db = require("../config/db");
 const config = require("../config/config");
 const moment = require("moment");
 const smsService = require('../utils/smsService');
+const sendPasswordEmail= require('../utils/smsService');
 
 const register = async (req, res) => {
   const { name, surname, phone, email } = req.body;
@@ -32,7 +33,8 @@ const register = async (req, res) => {
             console.error("Doğrulama kodu ekleme hatası:", err);
             return res.status(500).json({ error: "Doğrulama kodu kaydedilemedi." });
           }
-
+ // Doğrulama kodunu e-posta ile gönder
+ const emailSent = await smsService.sendEmail(email, "Kayıt Doğrulama Kodu", `Kayıt işleminiz için doğrulama kodunuz: ${verificationCode}`);
           // SMS gönderimi
           const message = `DonerciApp kayıt işleminiz için doğrulama kodunuz: ${verificationCode}. Kod 3 dakika geçerlidir.`;
           const smsSent = await smsService.sendSMS(phone, message);
@@ -76,10 +78,38 @@ const login = async (req, res) => {
         });
       }
 
-      // Daha güvenli rastgele doğrulama kodu
+      const user = result[0];
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = moment().add(3, "minutes").toDate();
 
+      // E-posta gönderimi (sadece kullanıcının kayıtlı e-posta adresi varsa)
+      if (user.email) {
+        try {
+          const emailSent = await smsService.sendEmail(
+            user.email,
+            "Giriş Doğrulama Kodu",
+            `Giriş işleminiz için doğrulama kodunuz: ${verificationCode}`
+          );
+          if (!emailSent) {
+            console.error("E-posta gönderilemedi");
+          }
+        } catch (emailError) {
+          console.error("E-posta gönderim hatası:", emailError);
+        }
+      }
+
+      // SMS gönderimi
+      const message = `DonerciApp giriş işleminiz için doğrulama kodunuz: ${verificationCode}. Kod 3 dakika geçerlidir.`;
+      try {
+        const smsSent = await smsService.sendSMS(phone, message);
+        if (!smsSent) {
+          console.error("SMS gönderilemedi");
+        }
+      } catch (smsError) {
+        console.error("SMS gönderim hatası:", smsError);
+      }
+
+      // Doğrulama kodunu veritabanına kaydet
       db.query(
         "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
         [phone, verificationCode, "login", expiresAt],
@@ -89,18 +119,10 @@ const login = async (req, res) => {
             return res.status(500).json({ error: "Doğrulama kodu kaydedilemedi." });
           }
 
-          // SMS Gönderimi
-          const message = `DonerciApp giriş işleminiz için doğrulama kodunuz: ${verificationCode}. Kod 3 dakika geçerlidir.`;
-          const smsSent = await smsService.sendSMS(phone, message);
-          
-          if (!smsSent) {
-            console.error("SMS gönderilemedi. Ancak işlem devam ediyor.");
-          }
-
-          console.log("SMS Gönderim Şablonu:");
-          console.log(`Telefon: ${phone}, Doğrulama Kodu: ${verificationCode}`);
-
-          res.json({ message: "Doğrulama kodu gönderildi." });
+          res.json({ 
+            message: "Doğrulama kodu gönderildi.",
+            emailSent: !!user.email // E-posta gönderildi mi bilgisi
+          });
         }
       );
     });

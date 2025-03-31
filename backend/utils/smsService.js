@@ -1,63 +1,52 @@
-const axios = require('axios');
-const smsConfig = require('./smsConfig'); // Dikkat: dosya yolunu kontrol edin
+const nodemailer = require('nodemailer');
+const axios = require('axios'); // SMS servisi için axios veya kullandığınız başka bir kütüphane olabilir
 
-/**
- * İleti Merkezi üzerinden SMS gönderimi yapar
- * @param {string} phone - SMS gönderilecek telefon numarası
- * @param {string} message - Gönderilecek SMS metni
- * @returns {Promise<boolean>} - İşlem başarılı/başarısız
- */
-async function sendSMS(phone, message) {
+// Nodemailer transporter yapılandırması
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'rtemir1881@gmail.com', // Gmail adresiniz
+    pass: 'wjmuwcwpdqvfrnij'     // Uygulama şifresi
+  }
+});
+
+// E-posta gönderme fonksiyonu
+async function sendEmail(recipientEmail, subject, message) {
+  const mailOptions = {
+    from: 'rtemir1881@gmail.com', // Gönderen adresi
+    to: recipientEmail,           // Alıcı e-posta adresi
+    subject: subject,             // E-posta konusu
+    text: message                 // E-posta içeriği
+  };
+
   try {
-    // Telefon numarasını formatla (başında 0 olacak şekilde ve karakterleri temizle)
-    const formattedPhone = phone.replace(/\D/g, '');
-    // Eğer numara 0 ile başlamıyorsa başına 0 ekle
-    const phoneNumber = formattedPhone.startsWith('0') ? formattedPhone : `0${formattedPhone}`;
-    
-    console.log('SMS Gönderim İsteği:', {
-      telefon: phoneNumber,
-      mesaj: message
-    });
-    
-    const requestData = {
-      request: {
-        authentication: {
-          key: smsConfig.API_KEY,
-          hash: smsConfig.API_HASH
-        },
-        order: {
-          sender: smsConfig.SMS_SENDER,
-          message: {
-            text: message,
-            recipients: {
-              number: [phoneNumber]
-            }
-          }
-        }
-      }
-    };
-    
-    const response = await axios.post('https://api.iletimerkezi.com/v1/send-sms/json', requestData);
-    
-    console.log('SMS Gönderim Yanıtı:', response.data);
-    
-    // Başarılı yanıt kontrolü
-    if (response.data && response.data.response && response.data.response.status.code === '200') {
-      return true;
-    } else {
-      console.error('SMS Gönderimi Başarısız:', response.data);
-      return false;
-    }
+    const info = await transporter.sendMail(mailOptions);
+    console.log('E-posta başarıyla gönderildi: ' + info.response);
+    return true;
   } catch (error) {
-    console.error('SMS Gönderim Hatası:', error.message);
-    if (error.response) {
-      console.error('Hata Detayı:', error.response.data);
-    }
+    console.error('E-posta gönderim hatası: ' + error.message);
     return false;
   }
 }
 
-// Dikkat: Bu şekilde export etmelisiniz
-module.exports = {
-  sendSMS
-};
+// SMS gönderme fonksiyonu (Örnek olarak axios kullanarak)
+async function sendSMS(phone, message) {
+  try {
+    // Burada SMS API'si çağrılacak. Örneğin Twilio, Nexmo veya başka bir servis.
+    // Aşağıdaki kodun sadece örnek olduğunu unutmayın. Kendi SMS sağlayıcınızın API'sini kullanmalısınız.
+
+    const response = await axios.post('SMS_SERVICE_API_URL', {
+      to: phone,
+      body: message,
+      // API'ye göndereceğiniz diğer parametreler
+    });
+
+    console.log('SMS başarıyla gönderildi: ', response.data);
+    return true;
+  } catch (error) {
+    console.error('SMS gönderim hatası: ', error.message);
+    return false;
+  }
+}
+
+module.exports = { sendEmail, sendSMS };
