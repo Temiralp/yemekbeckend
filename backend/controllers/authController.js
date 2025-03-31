@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const config = require("../config/config");
 const moment = require("moment");
+const smsService = require('../utils/smsService');
 
 const register = async (req, res) => {
   const { name, surname, phone, email } = req.body;
@@ -14,7 +15,7 @@ const register = async (req, res) => {
 
   try {
     // Telefon numarası kontrolü
-    db.query("SELECT * FROM users WHERE phone = ?", [phone], (checkErr, checkResult) => {
+    db.query("SELECT * FROM users WHERE phone = ?", [phone], async (checkErr, checkResult) => {
       if (checkErr) {
         return res.status(500).json({ error: "Kullanıcı kontrolünde hata oluştu." });
       }
@@ -26,10 +27,18 @@ const register = async (req, res) => {
       db.query(
         "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
         [phone, verificationCode, "registration", expiresAt],
-        (err, result) => {
+        async (err, result) => {
           if (err) {
             console.error("Doğrulama kodu ekleme hatası:", err);
             return res.status(500).json({ error: "Doğrulama kodu kaydedilemedi." });
+          }
+
+          // SMS gönderimi
+          const message = `DonerciApp kayıt işleminiz için doğrulama kodunuz: ${verificationCode}. Kod 3 dakika geçerlidir.`;
+          const smsSent = await smsService.sendSMS(phone, message);
+          
+          if (!smsSent) {
+            console.error("SMS gönderilemedi. Ancak işlem devam ediyor.");
           }
 
           console.log("SMS Gönderim Şablonu:");
@@ -55,7 +64,7 @@ const login = async (req, res) => {
   }
 
   try {
-    db.query("SELECT * FROM users WHERE phone = ?", [phone], (err, result) => {
+    db.query("SELECT * FROM users WHERE phone = ?", [phone], async (err, result) => {
       if (err) {
         console.error("Kullanıcı sorgulama hatası:", err);
         return res.status(500).json({ error: "Kullanıcı sorgulanamadı." });
@@ -74,10 +83,18 @@ const login = async (req, res) => {
       db.query(
         "INSERT INTO verification_codes (phone, code, purpose, expires_at) VALUES (?, ?, ?, ?)",
         [phone, verificationCode, "login", expiresAt],
-        (err, result) => {
+        async (err, result) => {
           if (err) {
             console.error("Doğrulama kodu ekleme hatası:", err);
             return res.status(500).json({ error: "Doğrulama kodu kaydedilemedi." });
+          }
+
+          // SMS Gönderimi
+          const message = `DonerciApp giriş işleminiz için doğrulama kodunuz: ${verificationCode}. Kod 3 dakika geçerlidir.`;
+          const smsSent = await smsService.sendSMS(phone, message);
+          
+          if (!smsSent) {
+            console.error("SMS gönderilemedi. Ancak işlem devam ediyor.");
           }
 
           console.log("SMS Gönderim Şablonu:");
