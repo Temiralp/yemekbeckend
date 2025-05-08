@@ -1,6 +1,6 @@
 
 const nodemailer = require('nodemailer');
-const axios = require('axios'); // SMS servisi için axios veya kullandığınız başka bir kütüphane olabilir
+
 
 
 const axios = require('axios');
