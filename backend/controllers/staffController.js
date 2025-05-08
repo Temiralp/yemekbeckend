@@ -30,14 +30,11 @@ const loginStaff = (req, res) => {
     const staff = results[0];
 
     bcrypt.compare(password, staff.password, (err, isMatch) => {
-      if (err) {
-        console.error("Şifre kontrol hatası:", err);
-        return res.status(500).json({ error: "Şifre kontrolü başarısız." });
-      }
+// bcrypt.compare yerine doğrudan string karşılaştırması:
+if (password !== staff.password) {
+  return res.status(401).json({ error: "Geçersiz şifre." });
+}
 
-      if (!isMatch) {
-        return res.status(401).json({ error: "Geçersiz şifre." });
-      }
 
       const updateQuery = `
         UPDATE staff 

@@ -3,15 +3,14 @@ const mysql = require("mysql2");
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
+    password: process.env.DB_PASSWORD || '1881',
     database: process.env.DB_NAME || 'donerci_db',
     connectionLimit: 10,
     waitForConnections: true,
     queueLimit: 0,
-    multipleStatements: true  // Çoklu sorgu desteği
+    multipleStatements: true 
 });
 
-// Bağlantı hatası yakalama
 pool.on('error', (err) => {
     console.error('Beklenmedik MySQL hatası:', err);
 });
