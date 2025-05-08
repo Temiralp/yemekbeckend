@@ -1,3 +1,8 @@
+
+const nodemailer = require('nodemailer');
+const axios = require('axios'); // SMS servisi için axios veya kullandığınız başka bir kütüphane olabilir
+
+
 const axios = require('axios');
 const crypto = require('crypto');
 const smsConfig = require('./smsConfig');
@@ -46,6 +51,7 @@ async function sendSMS(phone, message) {
   } catch (error) {
     console.error('SMS gönderim hatası:', error.message);
     return false;
+
   }
 }
 
