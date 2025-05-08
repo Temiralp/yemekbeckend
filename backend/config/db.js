@@ -8,10 +8,9 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     waitForConnections: true,
     queueLimit: 0,
-    multipleStatements: true  // Çoklu sorgu desteği
+    multipleStatements: true 
 });
 
-// Bağlantı hatası yakalama
 pool.on('error', (err) => {
     console.error('Beklenmedik MySQL hatası:', err);
 });

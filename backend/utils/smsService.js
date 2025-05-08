@@ -1,52 +1,166 @@
+
 const nodemailer = require('nodemailer');
 const axios = require('axios'); // SMS servisi için axios veya kullandığınız başka bir kütüphane olabilir
 
-// Nodemailer transporter yapılandırması
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'rtemir1881@gmail.com', // Gmail adresiniz
-    pass: 'atcnajedycxoqslj'     // Uygulama şifresi
-  }
-});
 
-// E-posta gönderme fonksiyonu
-async function sendEmail(recipientEmail, subject, message) {
-  const mailOptions = {
-    from: 'rtemir1881@gmail.com', // Gönderen adresi
-    to: recipientEmail,           // Alıcı e-posta adresi
-    subject: subject,             // E-posta konusu
-    text: message                 // E-posta içeriği
-  };
+const axios = require('axios');
+const crypto = require('crypto');
+const smsConfig = require('./smsConfig');
+const querystring = require('querystring');
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('E-posta başarıyla gönderildi: ' + info.response);
-    return true;
-  } catch (error) {
-    console.error('E-posta gönderim hatası: ' + error.message);
-    return false;
-  }
-}
-
-// SMS gönderme fonksiyonu (Örnek olarak axios kullanarak)
+// XML ile SMS gönderimi
 async function sendSMS(phone, message) {
   try {
-    // Burada SMS API'si çağrılacak. Örneğin Twilio, Nexmo veya başka bir servis.
-    // Aşağıdaki kodun sadece örnek olduğunu unutmayın. Kendi SMS sağlayıcınızın API'sini kullanmalısınız.
+    let formattedPhone = phone.toString().trim();
+    if (formattedPhone.startsWith("0")) {
+      formattedPhone = formattedPhone.substring(1);
+    }
 
-    const response = await axios.post('SMS_SERVICE_API_URL', {
-      to: phone,
-      body: message,
-      // API'ye göndereceğiniz diğer parametreler
+    const xmlData = `
+<?xml version="1.0" encoding="UTF-8"?>
+<request>
+  <authentication>
+    <key>${smsConfig.API_KEY}</key>
+    <hash>${smsConfig.API_HASH}</hash>
+  </authentication>
+  <order>
+    <sender>${smsConfig.SMS_SENDER}</sender>
+    <message>
+      <text><![CDATA[${message}]]></text>
+      <receipents>
+        <number>${formattedPhone}</number>
+      </receipents>
+    </message>
+  </order>
+</request>`;
+
+    const response = await axios.post('https://api.iletimerkezi.com/v1/send-sms', xmlData, {
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8'
+      }
     });
 
-    console.log('SMS başarıyla gönderildi: ', response.data);
-    return true;
+    if (response.data && response.data.includes('<code>200</code>')) {
+      return true;
+    } else {
+      const code = response.data.match(/<code>(\d+)<\/code>/)?.[1] || 'bilinmiyor';
+      const message = response.data.match(/<message>(.*?)<\/message>/)?.[1] || 'bilinmiyor';
+      console.error(`SMS hatası: Kod ${code}, Mesaj: ${message}`);
+      return false;
+    }
   } catch (error) {
-    console.error('SMS gönderim hatası: ', error.message);
+    console.error('SMS gönderim hatası:', error.message);
+    return false;
+
+  }
+}
+
+// Alternatif olarak URL-encoded form ile gönderim
+async function sendSMSFormData(phone, message) {
+  try {
+    let formattedPhone = phone.toString().trim();
+    if (formattedPhone.startsWith("0")) {
+      formattedPhone = formattedPhone.substring(1);
+    }
+
+    const formData = {
+      key: smsConfig.API_KEY,
+      hash: smsConfig.API_HASH,
+      text: message,
+      receipents: formattedPhone,
+      sender: smsConfig.SMS_SENDER,
+      iys: '0'
+    };
+
+    const response = await axios.post('https://api.iletimerkezi.com/v1/send-sms/get/', 
+      querystring.stringify(formData), 
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    if (response.data && response.data.includes('<code>200</code>')) {
+      return true;
+    } else {
+      const code = response.data.match(/<code>(\d+)<\/code>/)?.[1] || 'bilinmiyor';
+      const message = response.data.match(/<message>(.*?)<\/message>/)?.[1] || 'bilinmiyor';
+      console.error(`SMS hatası: Kod ${code}, Mesaj: ${message}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('SMS gönderim hatası:', error.message);
     return false;
   }
 }
 
-module.exports = { sendEmail, sendSMS };
+// GET yöntemiyle SMS
+async function sendSMSWithGet(phone, message) {
+  try {
+    let formattedPhone = phone.toString().trim();
+    if (formattedPhone.startsWith("0")) {
+      formattedPhone = formattedPhone.substring(1);
+    }
+
+    const url = `https://api.iletimerkezi.com/v1/send-sms/get/?key=${encodeURIComponent(smsConfig.API_KEY)}&hash=${encodeURIComponent(smsConfig.API_HASH)}&text=${encodeURIComponent(message)}&receipents=${encodeURIComponent(formattedPhone)}&sender=${encodeURIComponent(smsConfig.SMS_SENDER)}&iys=0`;
+
+    const response = await axios.get(url);
+
+    if (response.data && response.data.includes('<code>200</code>')) {
+      return true;
+    } else {
+      const code = response.data.match(/<code>(\d+)<\/code>/)?.[1] || 'bilinmiyor';
+      const message = response.data.match(/<message>(.*?)<\/message>/)?.[1] || 'bilinmiyor';
+      console.error(`SMS hatası: Kod ${code}, Mesaj: ${message}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('SMS gönderim hatası:', error.message);
+    return false;
+  }
+}
+
+// Yeni hash ile gönderim
+async function sendSMSWithNewHash(phone, message) {
+  try {
+    let formattedPhone = phone.toString().trim();
+    if (formattedPhone.startsWith("0")) {
+      formattedPhone = formattedPhone.substring(1);
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const hashString = smsConfig.API_KEY + smsConfig.API_HASH + timestamp;
+    const newHash = crypto.createHash('sha256').update(hashString).digest('hex');
+
+    const formData = {
+      key: smsConfig.API_KEY,
+      hash: newHash,
+      timestamp,
+      text: message,
+      receipents: formattedPhone,
+      sender: smsConfig.SMS_SENDER,
+      iys: '0'
+    };
+
+    const response = await axios.post('https://api.iletimerkezi.com/v1/send-sms/get/',
+      querystring.stringify(formData),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    if (response.data && response.data.includes('<code>200</code>')) {
+      return true;
+    } else {
+      const code = response.data.match(/<code>(\d+)<\/code>/)?.[1] || 'bilinmiyor';
+      const message = response.data.match(/<message>(.*?)<\/message>/)?.[1] || 'bilinmiyor';
+      console.error(`SMS hatası: Kod ${code}, Mesaj: ${message}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('SMS gönderim hatası:', error.message);
+    return false;
+  }
+}
+
+module.exports = {
+  sendSMS,
+  sendSMSFormData,
+  sendSMSWithGet,
+  sendSMSWithNewHash
+};
