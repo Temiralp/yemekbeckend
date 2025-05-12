@@ -82,10 +82,26 @@ const updateWorkingHours = (req, res) => {
 };
 
 // Şu anki çalışma durumunu kontrol et (açık mı kapalı mı)
+// Şu anki çalışma durumunu kontrol et (açık mı kapalı mı)
 const checkRestaurantOpen = (req, res) => {
   const currentDate = new Date();
   const currentDay = currentDate.getDay(); // 0: Pazar, 1: Pazartesi, ... 6: Cumartesi
+  
+  // Şu anki saati al (saat:dakika:saniye formatında)
   const currentTime = moment(currentDate).format('HH:mm:ss');
+  
+  // Şu anki saati dakika cinsinden hesapla
+  const currentHour = currentDate.getHours();
+  const currentMinute = currentDate.getMinutes();
+  const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+  // Debug için saati loglayalım
+  console.log("Kontrol edilen saat:", {
+    date: currentDate,
+    time: currentTime,
+    day: currentDay,
+    timeInMinutes: currentTimeInMinutes
+  });
 
   const query = `
     SELECT 
@@ -124,17 +140,52 @@ const checkRestaurantOpen = (req, res) => {
       });
     }
 
-    // Şu anki zamanın açılış/kapanış saatleri içinde olup olmadığını kontrol et
-    const isOpen = 
-      currentTime >= workingHours.opening_time && 
-      currentTime <= workingHours.closing_time;
+    // Açılış ve kapanış saatlerini dakika cinsine çevir
+    const openingTimeParts = workingHours.opening_time.split(':');
+    const openingHour = parseInt(openingTimeParts[0]);
+    const openingMinute = parseInt(openingTimeParts[1]);
+    const openingTimeInMinutes = openingHour * 60 + openingMinute;
+
+    const closingTimeParts = workingHours.closing_time.split(':');
+    const closingHour = parseInt(closingTimeParts[0]);
+    const closingMinute = parseInt(closingTimeParts[1]);
+    const closingTimeInMinutes = closingHour * 60 + closingMinute;
+
+    // Debug için çalışma saatlerini loglayalım
+    console.log("Çalışma saatleri:", {
+      opening: workingHours.opening_time,
+      closing: workingHours.closing_time,
+      openingMinutes: openingTimeInMinutes,
+      closingMinutes: closingTimeInMinutes
+    });
+
+    // Normal saat aralığı (açılış < kapanış)
+    let isOpen = false;
+    
+    if (openingTimeInMinutes < closingTimeInMinutes) {
+      // Normal çalışma saati durumu (ör: 09:00 - 17:00)
+      isOpen = currentTimeInMinutes >= openingTimeInMinutes && 
+               currentTimeInMinutes <= closingTimeInMinutes;
+      console.log("Normal çalışma saati kontrolü:", isOpen);
+    } else {
+      // Gece yarısını geçen çalışma saati durumu (ör: 22:00 - 02:00)
+      isOpen = currentTimeInMinutes >= openingTimeInMinutes || 
+               currentTimeInMinutes <= closingTimeInMinutes;
+      console.log("Gece yarısını geçen çalışma saati kontrolü:", isOpen);
+    }
 
     res.status(200).json({
       status: "success",
       message: isOpen ? "Restoran şu anda açık" : "Restoran şu anda kapalı",
       is_open: isOpen,
       working_hours: workingHours,
-      current_time: currentTime
+      current_time: currentTime,
+      debug: {
+        currentTimeInMinutes,
+        openingTimeInMinutes,
+        closingTimeInMinutes,
+        isGeceMesaisi: openingTimeInMinutes > closingTimeInMinutes
+      }
     });
   });
 };
