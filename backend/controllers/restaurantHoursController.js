@@ -84,21 +84,27 @@ const updateWorkingHours = (req, res) => {
 // Şu anki çalışma durumunu kontrol et (açık mı kapalı mı)
 // Şu anki çalışma durumunu kontrol et (açık mı kapalı mı)
 const checkRestaurantOpen = (req, res) => {
-  const currentDate = new Date();
-  const currentDay = currentDate.getDay(); // 0: Pazar, 1: Pazartesi, ... 6: Cumartesi
+  // UTC zaman bilgisini al
+  const currentDateUTC = new Date();
   
-  // Şu anki saati al (saat:dakika:saniye formatında)
-  const currentTime = moment(currentDate).format('HH:mm:ss');
+  // Türkiye saati için UTC+3 uygula
+  const turkeyTime = new Date(currentDateUTC.getTime() + (3 * 60 * 60 * 1000));
+  const currentDay = turkeyTime.getDay(); // 0: Pazar, 1: Pazartesi, ... 6: Cumartesi
   
-  // Şu anki saati dakika cinsinden hesapla
-  const currentHour = currentDate.getHours();
-  const currentMinute = currentDate.getMinutes();
+  // Şu anki saati al (saat:dakika:saniye formatında) - Türkiye saati
+  const currentTime = moment(turkeyTime).format('HH:mm:ss');
+  
+  // Şu anki saati dakika cinsinden hesapla - Türkiye saati
+  const currentHour = turkeyTime.getHours();
+  const currentMinute = turkeyTime.getMinutes();
   const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
   // Debug için saati loglayalım
-  console.log("Kontrol edilen saat:", {
-    date: currentDate,
-    time: currentTime,
+  console.log("Kontrol edilen saat (UTC vs Türkiye):", {
+    utcDate: currentDateUTC.toISOString(),
+    utcTime: moment(currentDateUTC).format('HH:mm:ss'),
+    turkeyDate: turkeyTime.toISOString(),
+    turkeyTime: currentTime,
     day: currentDay,
     timeInMinutes: currentTimeInMinutes
   });
@@ -152,11 +158,14 @@ const checkRestaurantOpen = (req, res) => {
     const closingTimeInMinutes = closingHour * 60 + closingMinute;
 
     // Debug için çalışma saatlerini loglayalım
-    console.log("Çalışma saatleri:", {
+    console.log("Çalışma saatleri karşılaştırması:", {
       opening: workingHours.opening_time,
       closing: workingHours.closing_time,
       openingMinutes: openingTimeInMinutes,
-      closingMinutes: closingTimeInMinutes
+      closingMinutes: closingTimeInMinutes,
+      currentTimeMinutes: currentTimeInMinutes,
+      isAfterOpening: currentTimeInMinutes >= openingTimeInMinutes,
+      isBeforeClosing: currentTimeInMinutes <= closingTimeInMinutes
     });
 
     // Normal saat aralığı (açılış < kapanış)
@@ -181,10 +190,17 @@ const checkRestaurantOpen = (req, res) => {
       working_hours: workingHours,
       current_time: currentTime,
       debug: {
+        utcTime: moment(currentDateUTC).format('HH:mm:ss'),
+        turkeyTime: currentTime,
         currentTimeInMinutes,
         openingTimeInMinutes,
         closingTimeInMinutes,
-        isGeceMesaisi: openingTimeInMinutes > closingTimeInMinutes
+        isGeceMesaisi: openingTimeInMinutes > closingTimeInMinutes,
+        currentDay,
+        timeComparison: {
+          isAfterOpening: currentTimeInMinutes >= openingTimeInMinutes,
+          isBeforeClosing: currentTimeInMinutes <= closingTimeInMinutes
+        }
       }
     });
   });
