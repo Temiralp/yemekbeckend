@@ -11,7 +11,7 @@ const register = async (req, res) => {
   const fullName = `${name} ${surname}`;
   
   // Daha güvenli rastgele doğrulama kodu
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const verificationCode = "123456";
   const expiresAt = moment().add(3, "minutes").toDate();
 
   try {
@@ -79,7 +79,7 @@ const login = async (req, res) => {
       }
 
       const user = result[0];
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = "123456";
       const expiresAt = moment().add(3, "minutes").toDate();
 
       // E-posta gönderimi (sadece kullanıcının kayıtlı e-posta adresi varsa)
