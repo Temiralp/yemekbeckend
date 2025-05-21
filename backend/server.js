@@ -22,9 +22,10 @@ const locationRouter = require("./routes/locationRoute");
 const app = express();
 
 // CORS ayarları
+
 app.use(
   cors({
-   origin: "http://ec2-3-91-81-174.compute-1.amazonaws.com",
+    origin: ["http://ec2-3-91-81-174.compute-1.amazonaws.com", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
