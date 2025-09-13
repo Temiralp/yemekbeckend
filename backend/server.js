@@ -14,10 +14,8 @@ const staffRouter = require("./routes/staffRoute");
 const path = require("path");
 const restaurantHoursRouter = require("./routes/restaurantHoursRoute");
 const sliderRouter = require("./routes/sliderRoute");
-const testRoutes = require('./routes/testRoutes');
+const testRoutes = require("./routes/testRoutes");
 const locationRouter = require("./routes/locationRoute");
-
-
 
 const app = express();
 
@@ -25,7 +23,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://ec2-3-91-81-174.compute-1.amazonaws.com", "http://localhost:5173"],
+    origin: [
+      "http://ec2-3-91-81-174.compute-1.amazonaws.com",
+      "http://localhost:5173",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -36,7 +37,7 @@ app.use(
 app.use(express.json());
 
 // Statik dosyalar
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/locations", locationRouter);
 // Rotalar
 app.use("/auth", authRoutes);
@@ -47,9 +48,8 @@ app.use("/api/orders", ordersRouter);
 app.use("/api/coupon", couponRouter);
 app.use("/api/staff", staffRouter);
 app.use("/api/sliders", sliderRouter);
-app.use('/api/test', testRoutes);
+app.use("/api/test", testRoutes);
 app.use("/api/sliders", sliderRouter);
-
 
 // Çalışma saatleri rotası
 app.use("/api/restaurant-hours", restaurantHoursRouter);

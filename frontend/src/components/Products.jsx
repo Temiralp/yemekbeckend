@@ -5,7 +5,7 @@ import api from "../services/api"; // API servis dosyanızın yolunu kontrol edi
 import "./Products.css"; // Stil dosyası (isteğe bağlı, aşağıda açıklayacağım)
 
 const Products = () => {
-  const { admin, user, logout } = useContext(AuthContext); // Kullanıcı ve admin bilgisi
+  const { admin, logout } = useContext(AuthContext); // Admin bilgisi
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,11 +33,7 @@ const Products = () => {
 
   // Sipariş oluşturma fonksiyonu
   const handleCreateOrder = async (productId) => {
-    if (!user) {
-      // Kullanıcı giriş yapmamışsa login sayfasına yönlendir
-      navigate("/auth/login");
-      return;
-    }
+    // Basit sipariş oluşturma
 
     try {
       const orderData = {
@@ -48,7 +44,7 @@ const Products = () => {
       const response = await api.post("/api/orders/", orderData);
       alert(response.data.message || "Sipariş başarıyla oluşturuldu!");
       // İsteğe bağlı: Sipariş sonrası başka bir sayfaya yönlendirme
-      // navigate("/orders"); 
+      // navigate("/orders");
     } catch (err) {
       setError(
         err.response?.data?.error || "Sipariş oluşturulurken bir hata oluştu."
