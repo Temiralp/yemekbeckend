@@ -19,13 +19,13 @@ const locationRouter = require("./routes/locationRoute");
 
 const app = express();
 
-// CORS ayarları
-
+// CORS ayarları - Netlify URL'iniz eklendi
 app.use(
   cors({
     origin: [
       "http://ec2-3-91-81-174.compute-1.amazonaws.com",
       "http://localhost:5173",
+      "https://reliable-dusk-ceab1f.netlify.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -39,9 +39,10 @@ app.use(express.json());
 // Statik dosyalar
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/locations", locationRouter);
+
 // Rotalar
 app.use("/auth", authRoutes);
-app.use("/api/addresses", addressRoute); // Burada da değişiklik yaptım
+app.use("/api/addresses", addressRoute);
 app.use("/api/products", productRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/orders", ordersRouter);
@@ -49,7 +50,6 @@ app.use("/api/coupon", couponRouter);
 app.use("/api/staff", staffRouter);
 app.use("/api/sliders", sliderRouter);
 app.use("/api/test", testRoutes);
-app.use("/api/sliders", sliderRouter);
 
 // Çalışma saatleri rotası
 app.use("/api/restaurant-hours", restaurantHoursRouter);
